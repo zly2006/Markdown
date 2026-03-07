@@ -295,7 +295,20 @@
 
 > **备注**: `PageBreakStarter` 以优先级 205 注册，在 `ThematicBreak` 之前检测 `***pagebreak***` 模式（正则 `^\s{0,3}\*{3}pagebreak\*{3}\s*$`），生成 `PageBreak` AST 节点。渲染器以虚线分隔符样式展示，可适配 PDF 导出/打印场景的分页控制。
 
-**覆盖率**: 55/55 (100%)
+#### 块级属性语法（Attributes，扩展）
+- ✅ `{.class}` 块级 CSS 类名属性
+- ✅ `{#id}` 块级 ID 属性
+- ✅ `{key=value}` 块级键值对属性
+- ✅ `{key="quoted value"}` 块级带引号值属性
+- ✅ `{.class1 .class2 #id key=value}` 混合属性
+- ✅ 独立属性段落（仅含 `{...}`，附加到前一个块）
+- ✅ 段落尾部属性行（段落最后一行为 `{...}`，附加到该段落）
+- ✅ 支持 Heading、Paragraph、BlockQuote、ListBlock、Table、FencedCodeBlock、CustomContainer
+- ✅ 跳过空行匹配前置块
+
+> **备注**: `BlockAttributeProcessor` 后处理器（优先级 150）实现 kramdown/Pandoc 风格的块属性语法。支持两种用法：独立属性段落附加到前一个块并移除，段落尾部属性行附加到该段落并剥离属性文本。行内属性（Link、Image、StyledText）已在 `InlineParser.tryParseAttributes()` 中原生支持。
+
+**覆盖率**: 64/64 (100%)
 
 ---
 
@@ -609,6 +622,28 @@
 
 ---
 
+## 22. HTML 生成器（HtmlRenderer）
+
+### ✅ 已支持
+- ✅ AST → HTML 完整转换（支持全部 41+ AST 节点类型）
+- ✅ `HtmlRenderer.render(document)` 渲染已解析文档
+- ✅ `HtmlRenderer.renderMarkdown(markdown)` 便捷 API（解析 + 渲染一步完成）
+- ✅ `softBreak` 配置（软换行输出字符，默认 `\n`）
+- ✅ `hardBreak` 配置（硬换行标签，默认 `<br />\n`）
+- ✅ `escapeHtml` 配置（是否转义 HTML 特殊字符）
+- ✅ `xhtml` 配置（是否输出 XHTML 自闭合标签）
+- ✅ 块级属性 `blockAttributes` 输出为 HTML 属性（class、id、key=value）
+- ✅ 标题自动 ID / 自定义 ID 输出
+- ✅ 表格对齐属性（`style="text-align:..."`)
+- ✅ 围栏代码块语言类名（`class="language-xxx"`）
+- ✅ HTML 特殊字符转义（`<`、`>`、`&`、`"`）
+
+> **备注**: `HtmlRenderer` 实现 `NodeVisitor<Unit>` 接口，通过 Visitor 模式遍历 AST 并生成标准 HTML。支持服务端 SSR 和 HTML 导出场景。参考 JetBrains Markdown 的 `HtmlGenerator` API 设计。
+
+**覆盖率**: 12/12 (100%)
+
+---
+
 ## 📊 总体覆盖率
 
 | # | 类别 | 已支持 | 缺失 | 覆盖率 |
@@ -622,7 +657,7 @@
 | 7 | 表格（GFM） | 11/11 | 0 | 100% |
 | 8 | HTML 块 | 10/10 | 0 | 100% |
 | 9 | 链接引用定义 | 12/12 | 0 | 100% |
-| 10 | 块级扩展 | 55/55 | 0 | 100% |
+| 10 | 块级扩展 | 64/64 | 0 | 100% |
 | 11 | 强调 | 13/13 | 0 | 100% |
 | 12 | 删除线（GFM） | 4/4 | 0 | 100% |
 | 13 | 行内代码 | 8/8 | 0 | 100% |
@@ -634,7 +669,8 @@
 | 19 | 行内扩展 | 33/33 | 0 | 100% |
 | 20 | 流式解析引擎 | 27/27 | 0 | 100% |
 | 21 | 字符与编码 | 6/6 | 0 | 100% |
-| | **总计** | **313/313** | **0** | **100%** |
+| 22 | HTML 生成器 | 12/12 | 0 | 100% |
+| | **总计** | **334/334** | **0** | **100%** |
 
 ---
 
@@ -673,9 +709,7 @@
 |--------|------|------|
 | **P1** | 语法验证/Linting | 解析时检测无效语法并返回诊断信息：未闭合围栏代码块/行内代码、重复标题 ID、无效脚注引用、标题层级不连续（如 h1 直接跳到 h3）等。解析结果附带 errors/warnings 列表，帮助用户排查语法错误 |
 | **P1** | 中文本地化优化 | 针对中文等非英文场景优化解析规则：全角标点后的定界符识别（如 `*中文*。` 正确解析斜体）、中文词边界的强调规则（避免 `我*的*文档` 误解析）、中文空格视为普通空格而非分隔符 |
-| **P2** | HTML 生成器 | 实现 `HtmlRenderer` Visitor，将 AST 节点树输出为标准 HTML。支持服务端 SSR 和 HTML 导出场景。参考 JetBrains Markdown 的 `HtmlGenerator(src, parsedTree, flavour).generateHtml()` API 设计。（来源：JETBRAINS_MARKDOWN_COMPARISON Phase 4） |
 | **P2** | Flavour 配置缓存 | 对 Flavour 配置（BlockStarter 列表、PostProcessor 列表、FlavourOptions）进行缓存，避免多次创建解析器时重复初始化，降低高频调用场景的开销。（来源：FLAVOUR_SYSTEM_SUMMARY Phase 4） |
-| **P2** | 属性语法 (Attributes) | 为块级或行内元素添加自定义 CSS 类、ID、属性（`{.class #id key=value}`，kramdown / Pandoc 风格），是图片高级特性、链接高级属性、自定义行内样式的通用基础能力 |
 | **P2** | 自定义语法规则/短代码 | 允许用户注册自定义短代码解析器，如 `{% youtube 123456 %}` 解析为嵌入代码。极大提升解析器扩展性，适配用户个性化场景（自定义组件、业务专属语法） |
 | **P2** | 多规范兼容 | 支持配置解析规范（CommonMark 0.30/0.31、GFM 0.29/最新、Markdown Extra、Pandoc 子集），适配不同平台（GitHub/GitLab/Notion）的语法差异 |
 | **P2** | 代码块增强 | `` ```python {hl_lines="1 3-5" linenums=true} `` — 解析代码块 info string 中的行号、行高亮等属性参数，生成 AST 节点携带额外元数据，满足技术文档代码展示需求 |

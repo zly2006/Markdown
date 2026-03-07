@@ -120,13 +120,15 @@ object ExtendedFlavour : MarkdownFlavour {
      *
      * 执行顺序：
      * 1. 标题 ID 生成（100）
-     * 2. 缩写替换（200）
-     * 3. 图表渲染（300）
-     * 4. 多列布局转换（350）
-     * 5. HTML 过滤（400）
+     * 2. 块级属性解析（150）
+     * 3. 缩写替换（200）
+     * 4. 图表渲染（300）
+     * 5. 多列布局转换（350）
+     * 6. HTML 过滤（400）
      */
     override val postProcessors: List<PostProcessor> = listOf(
         HeadingIdProcessor(),          // 100
+        BlockAttributeProcessor(),     // 150
         AbbreviationProcessor(),       // 200
         DiagramProcessor(),            // 300
         ColumnsLayoutProcessor(),      // 350

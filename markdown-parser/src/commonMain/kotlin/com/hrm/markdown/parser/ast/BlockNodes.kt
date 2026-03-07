@@ -35,6 +35,9 @@ class Heading(
     /** 获取最终使用的标题 ID（customId 优先，否则 autoId）。 */
     val id: String? get() = customId ?: autoId
 
+    /** 块级属性 `{.class #id key=value}`（由 BlockAttributeProcessor 后处理设置）。 */
+    var blockAttributes: Map<String, String> = emptyMap()
+
     override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitHeading(this)
 }
 
@@ -50,6 +53,9 @@ class SetextHeading(
     /** 获取最终使用的标题 ID。 */
     val id: String? get() = autoId
 
+    /** 块级属性 `{.class #id key=value}`（由 BlockAttributeProcessor 后处理设置）。 */
+    var blockAttributes: Map<String, String> = emptyMap()
+
     override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitSetextHeading(this)
 }
 
@@ -59,6 +65,10 @@ class SetextHeading(
 class Paragraph : ContainerNode() {
     /** 解析阶段捕获的原始内容（已去除块级标记），供行内解析使用。 */
     var rawContent: String? = null
+
+    /** 块级属性 `{.class #id key=value}`（由 BlockAttributeProcessor 后处理设置）。 */
+    var blockAttributes: Map<String, String> = emptyMap()
+
     override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitParagraph(this)
 }
 
@@ -100,6 +110,9 @@ class IndentedCodeBlock(
  * 块引用：以 `>` 为前缀的行。
  */
 class BlockQuote : ContainerNode() {
+    /** 块级属性 `{.class #id key=value}`（由 BlockAttributeProcessor 后处理设置）。 */
+    var blockAttributes: Map<String, String> = emptyMap()
+
     override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitBlockQuote(this)
 }
 
@@ -113,6 +126,9 @@ class ListBlock(
     var delimiter: Char = '.',
     var tight: Boolean = true
 ) : ContainerNode() {
+    /** 块级属性 `{.class #id key=value}`（由 BlockAttributeProcessor 后处理设置）。 */
+    var blockAttributes: Map<String, String> = emptyMap()
+
     override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitListBlock(this)
 }
 
@@ -157,6 +173,9 @@ class LinkReferenceDefinition(
  */
 class Table : ContainerNode() {
     var columnAlignments: List<Alignment> = emptyList()
+
+    /** 块级属性 `{.class #id key=value}`（由 BlockAttributeProcessor 后处理设置）。 */
+    var blockAttributes: Map<String, String> = emptyMap()
 
     enum class Alignment { LEFT, CENTER, RIGHT, NONE }
 
