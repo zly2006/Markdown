@@ -47,7 +47,7 @@ import kotlinx.coroutines.launch
 fun App() {
     MaterialTheme {
         var selectedTab by remember { mutableStateOf(0) }
-        val tabs = listOf("普通渲染", "流式渲染")
+        val tabs = listOf("普通渲染", "流式渲染", "分页加载")
 
         Column(
             modifier = Modifier
@@ -68,6 +68,7 @@ fun App() {
             when (selectedTab) {
                 0 -> NormalMarkdownDemo()
                 1 -> StreamingMarkdownDemo()
+                2 -> PaginationDemo()
             }
         }
     }
@@ -108,13 +109,11 @@ private fun StreamingMarkdownDemo() {
                     if (!isRunning) {
                         isRunning = true
                         streamFinished = false
-                        document = null
                         scope.launch {
                             parser.beginStream()
                             for (token in streamingTokens) {
                                 // 每次 append 后立即更新 document 状态，触发 UI 重组
                                 document = parser.append(token)
-                                // 慢速模式使用固定 200ms 延迟，便于逐帧观察
                                 delay(token.streamDelay())
                             }
                             document = parser.endStream()
@@ -159,7 +158,8 @@ private fun StreamingMarkdownDemo() {
 
         }
 
-        if (document == null && !isRunning) {
+        val doc = document
+        if (doc == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -175,10 +175,7 @@ private fun StreamingMarkdownDemo() {
                     lineHeight = 24.sp
                 )
             }
-        }
-
-        val doc = document
-        if (doc != null) {
+        } else {
             Markdown(
                 document = doc,
                 modifier = Modifier
@@ -249,6 +246,17 @@ private fun StreamingMarkdownDemo() {
                 scrollState.animateScrollTo(scrollState.maxValue)
             }
         }
+    }
+}
+
+@Composable
+private fun PaginationDemo() {
+    val longDoc = buildString {
+        repeat(200) { append("## 段落 $it\n\n这是第 $it 段内容。".repeat(3) + "\n\n") }
+    }
+    Column {
+        Text("分页加载 Demo - 200 个段落", Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+        Markdown(longDoc, Modifier.fillMaxSize().padding(horizontal = 16.dp), enablePagination = true, initialBlockCount = 50)
     }
 }
 

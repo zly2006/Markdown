@@ -6,8 +6,13 @@ import com.hrm.markdown.parser.SourceRange
 import com.hrm.markdown.parser.ast.*
 import com.hrm.markdown.parser.block.BlockParser
 import com.hrm.markdown.parser.block.postprocessors.PostProcessorRegistry
+import com.hrm.markdown.parser.block.starters.BlockStarterRegistry
+import com.hrm.markdown.parser.block.starters.FrontMatterStarter
 import com.hrm.markdown.parser.core.SourceText
+import com.hrm.markdown.parser.flavour.ExtendedFlavour
+import com.hrm.markdown.parser.flavour.MarkdownFlavour
 import com.hrm.markdown.parser.inline.InlineParser
+import com.hrm.markdown.parser.log.HLog
 import com.hrm.markdown.parser.streaming.InlineAutoCloser
 
 /**
@@ -22,10 +27,36 @@ import com.hrm.markdown.parser.streaming.InlineAutoCloser
  * - [DirtyRegionTracker]：计算脏区域
  * - [NodeReuser]：判断和复用未变化的旧节点
  * - [PostProcessorRegistry]：后处理管线
+ * - [MarkdownFlavour]：方言配置，控制支持的语法特性
+ *
+ * @param flavour Markdown 方言，控制支持的语法特性
+ * @param postProcessors 后处理器注册表，若为 null 则从 flavour 获取
  */
 class IncrementalEngine(
-    private val postProcessors: PostProcessorRegistry = PostProcessorRegistry.withDefaults()
+    private val flavour: MarkdownFlavour = ExtendedFlavour,
+    postProcessors: PostProcessorRegistry? = null
 ) {
+    companion object {
+        private const val TAG = "IncrementalEngine"
+    }
+    private val postProcessors: PostProcessorRegistry = postProcessors 
+        ?: PostProcessorRegistry().apply {
+            flavour.postProcessors.forEach { register(it) }
+        }
+    
+    /**
+     * 构建包含动态 BlockStarter 的注册表。
+     * FrontMatterStarter 需要 SourceText 参数，无法在 Flavour 中静态创建，
+     * 因此在每次解析时根据当前 source 动态注入。
+     */
+    private fun buildRegistry(source: SourceText): BlockStarterRegistry {
+        return BlockStarterRegistry().apply {
+            flavour.blockStarters.forEach { register(it) }
+            if (flavour.options.enableFrontMatter) {
+                register(FrontMatterStarter(source))
+            }
+        }
+    }
     // ────── 状态 ──────
     private val fullText = StringBuilder()
     private var _document: Document = Document()
@@ -49,6 +80,7 @@ class IncrementalEngine(
      * 对给定输入执行完整解析。
      */
     fun fullParse(input: String): Document {
+        HLog.d(TAG) { "fullParse input=${input.length} chars" }
         fullText.clear()
         fullText.append(input)
         _isStreaming = false
@@ -61,6 +93,7 @@ class IncrementalEngine(
     // ────── 流式 API ──────
 
     fun beginStream() {
+        HLog.d(TAG, "beginStream")
         fullText.clear()
         _document = Document()
         _sourceText = SourceText.of("")
@@ -77,11 +110,13 @@ class IncrementalEngine(
     }
 
     fun endStream(): Document {
+        HLog.d(TAG) { "endStream, totalLength=${fullText.length}" }
         _isStreaming = false
         return doFullParse()
     }
 
     fun abort(): Document {
+        HLog.w(TAG, "abort")
         _isStreaming = false
         return _document
     }
@@ -97,6 +132,7 @@ class IncrementalEngine(
      * @return 更新后的 Document
      */
     fun applyEdit(edit: EditOperation): Document {
+        HLog.d(TAG) { "applyEdit: $edit" }
         val oldSource = _sourceText
         val oldText = fullText.toString()
 
@@ -146,10 +182,14 @@ class IncrementalEngine(
         val reusablePrefixCount = nodeReuser.findReusablePrefixCount(oldChildren, dirtyRange)
 
         // 解析脏区域（BlockParser 只做块结构 + 行内解析，后处理由 Engine 统一控制）
-        val parser = BlockParser(newSource) { doc ->
-            doc.linkDefinitions.putAll(_document.linkDefinitions)
-            InlineParser(doc)
-        }
+        val parser = BlockParser(
+            source = newSource,
+            registry = buildRegistry(newSource),
+            inlineParserFactory = { doc ->
+                doc.linkDefinitions.putAll(_document.linkDefinitions)
+                InlineParser(doc, flavour.options)
+            }
+        )
 
         val newBlocks = if (dirtyRange.startLine < dirtyRange.endLine.coerceAtMost(newSource.lineCount)) {
             parser.parseLines(dirtyRange.startLine, dirtyRange.endLine.coerceAtMost(newSource.lineCount))
@@ -210,7 +250,11 @@ class IncrementalEngine(
     private fun doFullParse(): Document {
         val text = fullText.toString()
         _sourceText = SourceText.of(text)
-        val parser = BlockParser(_sourceText) { doc -> InlineParser(doc) }
+        val parser = BlockParser(
+            source = _sourceText,
+            registry = buildRegistry(_sourceText),
+            inlineParserFactory = { doc -> InlineParser(doc, flavour.options) }
+        )
         _document = parser.parse()
 
         // 后处理统一由 Engine 控制
@@ -219,6 +263,7 @@ class IncrementalEngine(
         stableBlockCount = _document.children.size
         stableEndLine = _sourceText.lineCount
         lastParsedLength = text.length
+        HLog.d(TAG) { "doFullParse done: ${_document.children.size} blocks, ${_sourceText.lineCount} lines" }
         return _document
     }
 
@@ -243,12 +288,17 @@ class IncrementalEngine(
         // 使用脏区域追踪器计算安全重解析起点
         val dirtyRange = dirtyTracker.computeAppendDirtyRange(stableEndLine, newSource)
         val reparseStart = dirtyRange.startLine
+        HLog.v(TAG) { "doIncrementalAppend: reparseStart=$reparseStart, lines=${newSource.lineCount}, stableEndLine=$stableEndLine" }
 
         // 解析脏区域（BlockParser 只做块结构 + 行内解析，后处理由 Engine 统一控制）
-        val parser = BlockParser(newSource) { doc ->
-            doc.linkDefinitions.putAll(_document.linkDefinitions)
-            InlineParser(doc)
-        }
+        val parser = BlockParser(
+            source = newSource,
+            registry = buildRegistry(newSource),
+            inlineParserFactory = { doc ->
+                doc.linkDefinitions.putAll(_document.linkDefinitions)
+                InlineParser(doc, flavour.options)
+            }
+        )
 
         val tailBlocks = if (reparseStart < newSource.lineCount) {
             parser.parseLines(reparseStart, newSource.lineCount)
@@ -258,6 +308,7 @@ class IncrementalEngine(
 
         // 分类稳定和不稳定块
         val (nowStable, stillOpen) = classifyTailBlocks(tailBlocks, newSource)
+        HLog.v(TAG) { "tailBlocks=${tailBlocks.size}, stable=${nowStable.size}, open=${stillOpen.size}" }
 
         // 对仍在构建中的块做 auto-close 修复
         val displayBlocks = if (_isStreaming && stillOpen.isNotEmpty()) {
@@ -314,10 +365,9 @@ class IncrementalEngine(
         postProcessors.processAll(newDoc)
 
         _document = newDoc
+        HLog.v(TAG) { "doIncrementalAppend done: reused=$reusableCount, stable=${nowStable.size}, open=${reusedDisplayBlocks.size}, total=${newDoc.children.size}" }
         return _document
     }
-
-    // ────── 开放块实例复用 ──────
 
     /**
      * 对仍在构建中的 displayBlocks，尝试在旧文档的 children 中查找

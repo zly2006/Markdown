@@ -587,9 +587,12 @@
 
 ## 📋 剩余待实现项
 
-| 优先级 | 项目 | 说明 |
-|--------|------|------|
-| **P4** | 语法高亮 | 渲染器职责，根据 info string 进行代码着色（非解析器范畴） |
+| 优先级 | 项目 | 说明 | 来源 |
+|--------|------|------|------|
+| **P1** | FrontMatter 动态注册 | `FrontMatterStarter` 需要 `SourceText` 参数，无法在 Flavour 中静态创建。需在 `BlockParser` 构造时动态注入，或创建专门的 `FrontMatterFlavour`。当前 `FrontMatterParserTest` 测试失败。 | FLAVOUR_SYSTEM_SUMMARY |
+| **P1** | IndentedCodeBlock 冲突处理 | `IndentedCodeBlockStarter` 与扩展语法（定义列表等）存在优先级冲突，已从 `ExtendedFlavour` 移除。需设计优先级策略或条件性启用机制，使缩进代码块在无冲突时仍可使用。当前 `IndentedCodeBlockTest` 测试失败。 | FLAVOUR_SYSTEM_SUMMARY |
+| **P1** | 按需内联解析（Lazy Inline） | 块级解析完成后，内联元素延迟到首次访问时才解析（`Lazy<List<InlineNode>>`）。优化 IDE 语法高亮场景（只解析可见块）和长文档预览（分页 + 按需解析内联）。参考 JetBrains Markdown 的分级解析设计。 | JETBRAINS_MARKDOWN_COMPARISON, FLAVOUR_SYSTEM_SUMMARY |
+| **P4** | 语法高亮 | 渲染器职责，根据 info string 进行代码着色（非解析器范畴） | — |
 
 ---
 
@@ -622,6 +625,8 @@
 |--------|------|------|
 | **P1** | 语法验证/Linting | 解析时检测无效语法并返回诊断信息：未闭合围栏代码块/行内代码、重复标题 ID、无效脚注引用、标题层级不连续（如 h1 直接跳到 h3）等。解析结果附带 errors/warnings 列表，帮助用户排查语法错误 |
 | **P1** | 中文本地化优化 | 针对中文等非英文场景优化解析规则：全角标点后的定界符识别（如 `*中文*。` 正确解析斜体）、中文词边界的强调规则（避免 `我*的*文档` 误解析）、中文空格视为普通空格而非分隔符 |
+| **P2** | HTML 生成器 | 实现 `HtmlRenderer` Visitor，将 AST 节点树输出为标准 HTML。支持服务端 SSR 和 HTML 导出场景。参考 JetBrains Markdown 的 `HtmlGenerator(src, parsedTree, flavour).generateHtml()` API 设计。（来源：JETBRAINS_MARKDOWN_COMPARISON Phase 4） |
+| **P2** | Flavour 配置缓存 | 对 Flavour 配置（BlockStarter 列表、PostProcessor 列表、FlavourOptions）进行缓存，避免多次创建解析器时重复初始化，降低高频调用场景的开销。（来源：FLAVOUR_SYSTEM_SUMMARY Phase 4） |
 | **P2** | 属性语法 (Attributes) | 为块级或行内元素添加自定义 CSS 类、ID、属性（`{.class #id key=value}`，kramdown / Pandoc 风格），是图片高级特性、链接高级属性、自定义行内样式的通用基础能力 |
 | **P2** | 自定义语法规则/短代码 | 允许用户注册自定义短代码解析器，如 `{% youtube 123456 %}` 解析为嵌入代码。极大提升解析器扩展性，适配用户个性化场景（自定义组件、业务专属语法） |
 | **P2** | 多规范兼容 | 支持配置解析规范（CommonMark 0.30/0.31、GFM 0.29/最新、Markdown Extra、Pandoc 子集），适配不同平台（GitHub/GitLab/Notion）的语法差异 |

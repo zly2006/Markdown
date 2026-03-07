@@ -2,8 +2,11 @@ package com.hrm.markdown.parser
 
 import com.hrm.markdown.parser.ast.Document
 import com.hrm.markdown.parser.core.SourceText
+import com.hrm.markdown.parser.flavour.ExtendedFlavour
+import com.hrm.markdown.parser.flavour.MarkdownFlavour
 import com.hrm.markdown.parser.incremental.EditOperation
 import com.hrm.markdown.parser.incremental.IncrementalEngine
+import com.hrm.markdown.parser.log.HLog
 import com.hrm.markdown.parser.streaming.StreamingParser
 
 /**
@@ -18,8 +21,16 @@ import com.hrm.markdown.parser.streaming.StreamingParser
  *
  * ## 完整解析
  * ```kotlin
+ * // 默认使用扩展版（包含所有特性）
  * val parser = MarkdownParser()
  * val document = parser.parse("# Hello\n\nWorld")
+ *
+ * // 使用特定方言
+ * import com.hrm.markdown.parser.flavour.CommonMarkFlavour
+ * import com.hrm.markdown.parser.flavour.GFMFlavour
+ *
+ * val commonMarkParser = MarkdownParser(CommonMarkFlavour)
+ * val gfmParser = MarkdownParser(GFMFlavour)
  * ```
  *
  * ## 流式解析（LLM 场景）
@@ -40,11 +51,14 @@ import com.hrm.markdown.parser.streaming.StreamingParser
  * parser.insert(offset = 13, text = " of Markdown")
  * val doc = parser.document // 增量更新后的 AST
  * ```
+ *
+ * @param flavour Markdown 方言，控制支持的语法特性。默认为 [ExtendedFlavour]（包含所有扩展）。
  */
-class MarkdownParser {
-
-    private val streamingParser = StreamingParser()
-    private val editEngine = IncrementalEngine()
+class MarkdownParser(
+    val flavour: MarkdownFlavour = ExtendedFlavour
+) {
+    private val streamingParser = StreamingParser(flavour)
+    private val editEngine = IncrementalEngine(flavour)
 
     /** 是否处于编辑模式（通过 edit API 操作过） */
     private var inEditMode = false
@@ -71,6 +85,7 @@ class MarkdownParser {
      * 返回 AST 的根 Document 节点。
      */
     fun parse(input: String): Document {
+        HLog.i(TAG) { "parse input=${input.length} chars" }
         inEditMode = false
         return streamingParser.fullParse(input)
     }
@@ -81,6 +96,7 @@ class MarkdownParser {
      * 开始一次新的流式会话。清空之前的状态。
      */
     fun beginStream() {
+        HLog.i(TAG, "beginStream")
         inEditMode = false
         streamingParser.beginStream()
     }
@@ -101,6 +117,7 @@ class MarkdownParser {
      * @return 最终的 Document
      */
     fun endStream(): Document {
+        HLog.i(TAG, "endStream")
         return streamingParser.endStream()
     }
 
@@ -184,11 +201,16 @@ class MarkdownParser {
     }
 
     companion object {
+        private const val TAG = "MarkdownParser"
+
         /**
          * 便捷方法：将 Markdown 输入解析为 Document AST。
+         *
+         * @param input Markdown 文本
+         * @param flavour Markdown 方言，默认为 [ExtendedFlavour]
          */
-        fun parseToDocument(input: String): Document {
-            return MarkdownParser().parse(input)
+        fun parseToDocument(input: String, flavour: MarkdownFlavour = ExtendedFlavour): Document {
+            return MarkdownParser(flavour).parse(input)
         }
     }
 }

@@ -10,7 +10,7 @@ import com.hrm.markdown.parser.core.SourceText
  * 前置元数据块开启器：`---` (YAML) 或 `+++` (TOML)。
  * 仅在文档第一行生效。
  */
-internal class FrontMatterStarter(
+class FrontMatterStarter(
     private val source: SourceText
 ) : BlockStarter {
     override val priority: Int = 10

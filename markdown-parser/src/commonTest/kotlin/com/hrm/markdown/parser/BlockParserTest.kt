@@ -1,6 +1,7 @@
 package com.hrm.markdown.parser
 
 import com.hrm.markdown.parser.ast.*
+import com.hrm.markdown.parser.flavour.CommonMarkFlavour
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -1053,7 +1054,8 @@ class ListExtendedTest {
 
 class IndentedCodeBlockTest {
 
-    private val parser = MarkdownParser()
+    // IndentedCodeBlock 属于 CommonMark 标准语法，ExtendedFlavour 中因与定义列表等扩展冲突而移除
+    private val parser = MarkdownParser(CommonMarkFlavour)
 
     @Test
     fun should_parse_indented_code_block() {

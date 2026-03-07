@@ -2,7 +2,10 @@ package com.hrm.markdown.parser.streaming
 
 import com.hrm.markdown.parser.ast.Document
 import com.hrm.markdown.parser.core.SourceText
+import com.hrm.markdown.parser.flavour.ExtendedFlavour
+import com.hrm.markdown.parser.flavour.MarkdownFlavour
 import com.hrm.markdown.parser.incremental.IncrementalEngine
+import com.hrm.markdown.parser.log.HLog
 
 /**
  * 面向 LLM 流式输出的高性能增量解析器。
@@ -30,10 +33,17 @@ import com.hrm.markdown.parser.incremental.IncrementalEngine
  * parser.endStream()
  * val finalDoc = parser.document // 最终文档（不做修复）
  * ```
+ *
+ * @param flavour Markdown 方言，控制支持的语法特性
  */
-class StreamingParser {
+class StreamingParser(
+    flavour: MarkdownFlavour = ExtendedFlavour
+) {
+    companion object {
+        private const val TAG = "StreamingParser"
+    }
 
-    private val engine = IncrementalEngine()
+    private val engine = IncrementalEngine(flavour)
 
     /** 当前文档 AST */
     val document: Document get() = engine.document
@@ -48,6 +58,7 @@ class StreamingParser {
      * 开始一次新的流式会话。清空之前的状态。
      */
     fun beginStream() {
+        HLog.i(TAG, "beginStream")
         engine.beginStream()
     }
 
@@ -58,7 +69,9 @@ class StreamingParser {
      * @return 更新后的 Document
      */
     fun append(chunk: String): Document {
-        return engine.append(chunk)
+        val doc = engine.append(chunk)
+        HLog.d(TAG) { "append chunk=${chunk.length} chars, children=${doc.children.size}" }
+        return doc
     }
 
     /**
@@ -67,6 +80,7 @@ class StreamingParser {
      * @return 最终的 Document
      */
     fun endStream(): Document {
+        HLog.i(TAG, "endStream")
         return engine.endStream()
     }
 
@@ -76,6 +90,7 @@ class StreamingParser {
      * @return 当前状态的 Document（含修复）
      */
     fun abort(): Document {
+        HLog.w(TAG, "abort")
         return engine.abort()
     }
 
