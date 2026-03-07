@@ -484,6 +484,7 @@ class BlockParser(
             is Heading -> false
             is SetextHeading -> false
             is ThematicBreak -> false
+            is PageBreak -> false
             is BlankLine -> false
             else -> true
         }
@@ -691,12 +692,12 @@ class BlockParser(
                     return
                 }
 
-                // 检查是否为 TOC 占位符
-                if (content == "[TOC]" || content == "[[toc]]") {
-                    val toc = TocPlaceholder()
-                    toc.lineRange = LineRange(ob.contentStartLine, ob.lastLineIndex + 1)
+                // 检查是否为 TOC 占位符（支持高级配置）
+                val tocResult = tryParseTocPlaceholder(content)
+                if (tocResult != null) {
+                    tocResult.lineRange = LineRange(ob.contentStartLine, ob.lastLineIndex + 1)
                     val parent = node.parent as? ContainerNode
-                    parent?.replaceChild(node, toc)
+                    parent?.replaceChild(node, tocResult)
                     return
                 }
 
@@ -1080,6 +1081,77 @@ class BlockParser(
             else -> {
                 val lines = (lr.startLine until lr.endLine).map { source.lineContent(it) }
                 lines.joinToString("\n")
+            }
+        }
+    }
+
+    /**
+     * 尝试将段落内容解析为 TOC 占位符（支持高级配置）。
+     *
+     * 支持格式：
+     * - `[TOC]` 或 `[[toc]]`（基础）
+     * - 后跟配置行：`:depth=2-4`、`:exclude=#ignore`、`:order=asc`
+     *
+     * @return 解析成功返回 [TocPlaceholder]，否则返回 null
+     */
+    private fun tryParseTocPlaceholder(content: String): TocPlaceholder? {
+        val lines = content.lines()
+        if (lines.isEmpty()) return null
+
+        val firstLine = lines[0].trim()
+        if (firstLine != "[TOC]" && firstLine != "[[toc]]") return null
+
+        val toc = TocPlaceholder()
+
+        // 解析后续配置行
+        for (i in 1 until lines.size) {
+            val line = lines[i].trim()
+            if (line.isEmpty()) continue
+            if (!line.startsWith(':')) {
+                // 非配置行 → 不是纯 TOC 段落
+                return null
+            }
+            parseTocConfigLine(toc, line)
+        }
+
+        return toc
+    }
+
+    /**
+     * 解析单行 TOC 配置参数。
+     */
+    private fun parseTocConfigLine(toc: TocPlaceholder, line: String) {
+        val content = line.removePrefix(":")
+        val eqIndex = content.indexOf('=')
+        if (eqIndex < 0) return
+
+        val key = content.substring(0, eqIndex).trim().lowercase()
+        val value = content.substring(eqIndex + 1).trim()
+
+        when (key) {
+            "depth" -> {
+                // 支持 "2-4" 或 "3" 格式
+                val dashIndex = value.indexOf('-')
+                if (dashIndex >= 0) {
+                    toc.minDepth = value.substring(0, dashIndex).trim().toIntOrNull() ?: 1
+                    toc.maxDepth = value.substring(dashIndex + 1).trim().toIntOrNull() ?: 6
+                } else {
+                    val depth = value.toIntOrNull()
+                    if (depth != null) {
+                        toc.minDepth = 1
+                        toc.maxDepth = depth
+                    }
+                }
+            }
+            "exclude" -> {
+                // 支持逗号分隔的 ID 列表，ID 前可选 #
+                toc.excludeIds = value.split(',').map { it.trim().removePrefix("#") }.filter { it.isNotEmpty() }
+            }
+            "order" -> {
+                val normalized = value.lowercase()
+                if (normalized == "asc" || normalized == "desc") {
+                    toc.order = normalized
+                }
             }
         }
     }

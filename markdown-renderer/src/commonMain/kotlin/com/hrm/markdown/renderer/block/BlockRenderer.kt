@@ -37,9 +37,11 @@ internal fun BlockRenderer(
         is Admonition -> AdmonitionRenderer(node, modifier)
         is CustomContainer -> CustomContainerRenderer(node, modifier)
         is DiagramBlock -> DiagramBlockRenderer(node, modifier)
+        is ColumnsLayout -> ColumnsLayoutRenderer(node, modifier)
         is DefinitionList -> DefinitionListRenderer(node, modifier)
         is FootnoteDefinition -> FootnoteDefinitionRenderer(node, modifier)
-        is TocPlaceholder -> TocPlaceholderRenderer(modifier)
+        is TocPlaceholder -> TocPlaceholderRenderer(node, modifier)
+        is PageBreak -> PageBreakRenderer(modifier)
         is FrontMatter -> { /* FrontMatter 通常不渲染 */ }
         is LinkReferenceDefinition -> { /* 引用定义不直接渲染 */ }
         is AbbreviationDefinition -> { /* 缩写定义不直接渲染 */ }
@@ -57,16 +59,39 @@ internal fun BlockRenderer(
 
 /**
  * TOC 占位符渲染器：渲染自动生成的目录。
+ *
+ * 支持高级配置：
+ * - `minDepth`/`maxDepth`：过滤标题层级范围
+ * - `excludeIds`：排除指定 ID 的标题
+ * - `order`：排序方式（asc/desc）
  */
 @Composable
 internal fun TocPlaceholderRenderer(
+    node: TocPlaceholder,
     modifier: Modifier = Modifier,
 ) {
     val theme = LocalMarkdownTheme.current
     val document = LocalRendererDocument.current
 
     // 收集所有标题
-    val headings = collectHeadings(document)
+    var headings = collectHeadings(document)
+    if (headings.isEmpty()) return
+
+    // 按深度范围过滤
+    headings = headings.filter { it.level in node.minDepth..node.maxDepth }
+
+    // 按排除 ID 过滤
+    if (node.excludeIds.isNotEmpty()) {
+        headings = headings.filter { heading ->
+            heading.id == null || heading.id !in node.excludeIds
+        }
+    }
+
+    // 按排序方式排序
+    if (node.order == "desc") {
+        headings = headings.reversed()
+    }
+
     if (headings.isEmpty()) return
 
     Column(
@@ -79,13 +104,14 @@ internal fun TocPlaceholderRenderer(
             modifier = Modifier.padding(bottom = 4.dp),
         )
         for ((text, level, _) in headings) {
+            val adjustedLevel = (level - node.minDepth).coerceAtLeast(0)
             Text(
-                text = "${"  ".repeat((level - 1).coerceAtLeast(0))}• $text",
+                text = "${"  ".repeat(adjustedLevel)}• $text",
                 style = theme.bodyStyle.copy(
                     color = theme.linkColor,
                     fontStyle = FontStyle.Normal,
                 ),
-                modifier = Modifier.padding(start = (level - 1).coerceAtLeast(0).dp * 12),
+                modifier = Modifier.padding(start = adjustedLevel.dp * 12),
             )
         }
     }

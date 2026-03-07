@@ -246,9 +246,27 @@ class BlankLine : LeafNode() {
 
 /**
  * TOC 占位符：`[TOC]` 或 `[[toc]]`，渲染时自动生成目录。
+ *
+ * 支持高级配置参数（紧跟 `[TOC]` 之后的行）：
+ * - `:depth=2-4`：标题深度范围
+ * - `:exclude=#ignore`：排除指定 ID 的标题
+ * - `:order=asc|desc`：排序方式
  */
 class TocPlaceholder : LeafNode() {
     override val literal: String get() = ""
+
+    /** 最小标题深度（默认 1）。 */
+    var minDepth: Int = 1
+
+    /** 最大标题深度（默认 6）。 */
+    var maxDepth: Int = 6
+
+    /** 要排除的标题 ID 列表。 */
+    var excludeIds: List<String> = emptyList()
+
+    /** 排序方式："asc"（默认，按文档顺序）或 "desc"（逆序）。 */
+    var order: String = "asc"
+
     override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitTocPlaceholder(this)
 }
 
@@ -301,4 +319,44 @@ class DiagramBlock(
     override var literal: String = ""
 ) : LeafNode() {
     override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitDiagramBlock(this)
+}
+
+/**
+ * 多列布局容器：`:::columns` 到 `:::`。
+ *
+ * 语法：
+ * ```
+ * :::columns
+ * :::column{width=50%}
+ * 左列内容
+ * :::column{width=50%}
+ * 右列内容
+ * :::
+ * ```
+ *
+ * 包含多个 [ColumnItem] 子节点，每个子节点代表一列。
+ */
+class ColumnsLayout : ContainerNode() {
+    override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitColumnsLayout(this)
+}
+
+/**
+ * 多列布局中的单列：`:::column{width=50%}`。
+ *
+ * @property width 列宽，如 "50%"、"300px"，为空时表示平均分配
+ */
+class ColumnItem(
+    var width: String = "",
+) : ContainerNode() {
+    override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitColumnItem(this)
+}
+
+/**
+ * 分页符标记：`***pagebreak***`。
+ *
+ * 用于 PDF 导出/打印场景，渲染器据此插入分页样式。
+ */
+class PageBreak : LeafNode() {
+    override val literal: String get() = ""
+    override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitPageBreak(this)
 }

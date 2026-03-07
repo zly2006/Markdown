@@ -85,22 +85,24 @@ object ExtendedFlavour : MarkdownFlavour {
      * 1. Setext 标题（100）
      * 2. ATX 标题（110）
      * 3. 表格（200）
-     * 4. 主题分隔线（210）
-     * 5. 自定义容器（300）
-     * 6. 围栏代码块（310）
-     * 7. 数学块（320）
-     * 8. HTML 块（400）
-     * 9. 块引用（410）
-     * 10. 列表项（500）
-     * 11. 脚注定义（510）
-     * 12. 定义描述（520）
-     * 13. 缩进代码块（600，在定义列表/脚注内部自动让步）
+     * 4. 分页符（205）
+     * 5. 主题分隔线（210）
+     * 6. 自定义容器（300）
+     * 7. 围栏代码块（310）
+     * 8. 数学块（320）
+     * 9. HTML 块（400）
+     * 10. 块引用（410）
+     * 11. 列表项（500）
+     * 12. 脚注定义（510）
+     * 13. 定义描述（520）
+     * 14. 缩进代码块（600，在定义列表/脚注内部自动让步）
      */
     override val blockStarters: List<BlockStarter> = listOf(
         FrontMatterStarter(),          // 10
         SetextHeadingStarter(),        // 100
         HeadingStarter(),              // 110
         TableStarter(),                // 200
+        PageBreakStarter(),            // 205
         ThematicBreakStarter(),        // 210
         CustomContainerStarter(),      // 300
         FencedCodeBlockStarter(),      // 310
@@ -120,12 +122,14 @@ object ExtendedFlavour : MarkdownFlavour {
      * 1. 标题 ID 生成（100）
      * 2. 缩写替换（200）
      * 3. 图表渲染（300）
-     * 4. HTML 过滤（400）
+     * 4. 多列布局转换（350）
+     * 5. HTML 过滤（400）
      */
     override val postProcessors: List<PostProcessor> = listOf(
         HeadingIdProcessor(),          // 100
         AbbreviationProcessor(),       // 200
         DiagramProcessor(),            // 300
+        ColumnsLayoutProcessor(),      // 350
         HtmlFilterProcessor(),         // 400
     )
 

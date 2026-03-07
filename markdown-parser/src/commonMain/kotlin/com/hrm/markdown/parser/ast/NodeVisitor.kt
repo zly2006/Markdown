@@ -35,6 +35,9 @@ interface NodeVisitor<R> {
 
     fun visitCustomContainer(node: CustomContainer): R
     fun visitDiagramBlock(node: DiagramBlock): R
+    fun visitColumnsLayout(node: ColumnsLayout): R
+    fun visitColumnItem(node: ColumnItem): R
+    fun visitPageBreak(node: PageBreak): R
 
     // 行内节点
     fun visitText(node: Text): R
@@ -95,6 +98,9 @@ abstract class DefaultNodeVisitor<R>(private val defaultValue: R) : NodeVisitor<
     override fun visitAbbreviationDefinition(node: AbbreviationDefinition): R = defaultValue
     override fun visitCustomContainer(node: CustomContainer): R = defaultValue
     override fun visitDiagramBlock(node: DiagramBlock): R = defaultValue
+    override fun visitColumnsLayout(node: ColumnsLayout): R = defaultValue
+    override fun visitColumnItem(node: ColumnItem): R = defaultValue
+    override fun visitPageBreak(node: PageBreak): R = defaultValue
     override fun visitText(node: Text): R = defaultValue
     override fun visitSoftLineBreak(node: SoftLineBreak): R = defaultValue
     override fun visitHardLineBreak(node: HardLineBreak): R = defaultValue

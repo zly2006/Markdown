@@ -209,6 +209,11 @@
 #### 目录（TOC，扩展）
 - ✅ `[TOC]` 自动生成目录
 - ✅ `[[toc]]` 自动生成目录（备选语法）
+- ✅ `[TOC]\n:depth=2-4` 深度范围过滤（minDepth-maxDepth）
+- ✅ `[TOC]\n:exclude=#ignore` 按标题 ID 排除
+- ✅ `[TOC]\n:order=asc|desc` 排序方式（正序/逆序）
+
+> **备注**: `BlockParser.tryParseTocPlaceholder()` 解析 `[TOC]` 后续的配置行（`:key=value` 格式），将参数写入 `TocPlaceholder` 节点的 `minDepth`/`maxDepth`/`excludeIds`/`order` 属性。渲染器据此过滤标题深度范围、排除指定 ID、调整排序方式。
 
 #### 可折叠内容（扩展）
 - ✅ `<details><summary>标题</summary>内容</details>` 折叠/展开块（作为 HTML 块类型 6 处理）
@@ -269,7 +274,23 @@
 
 > **备注**: 后处理阶段 `convertDiagramBlocks()` 将 info string 匹配已知图表语言的 FencedCodeBlock 转换为 `DiagramBlock` AST 节点。渲染器已支持 Mermaid flowchart/graph 和 PlantUML sequence diagram 的原生 Compose Canvas 绘制（含节点形状、箭头、标签、自动布局），其他图表类型以带类型标签的代码块形式展示。
 
-**覆盖率**: 41/41 (100%)
+#### 多列布局（Columns Layout，扩展）
+- ✅ `:::columns` 多列布局容器
+- ✅ `:::column` 列项（等宽分配）
+- ✅ `:::column "width=50%"` 列项（指定百分比宽度）
+- ✅ `:::column{width=300px}` 列项（指定像素宽度）
+- ✅ 列内支持完整的块级元素解析
+- ✅ 支持两列、三列及更多列的布局
+
+> **备注**: 基于已实现的 `CustomContainer` 解析，`ColumnsLayoutProcessor` 后处理器将 `CustomContainer(type="columns")` 转换为 `ColumnsLayout` AST 节点，内部的 `CustomContainer(type="column")` 转换为 `ColumnItem` 节点。处理器通过递归展平算法处理块解析器产生的嵌套结构。列宽支持百分比（`%`）和像素（`px`）两种单位。
+
+#### 分页符（Page Break，扩展）
+- ✅ `***pagebreak***` 分页标记（大小写不敏感）
+- ✅ 分页标记前后允许空格
+
+> **备注**: `PageBreakStarter` 以优先级 205 注册，在 `ThematicBreak` 之前检测 `***pagebreak***` 模式（正则 `^\s{0,3}\*{3}pagebreak\*{3}\s*$`），生成 `PageBreak` AST 节点。渲染器以虚线分隔符样式展示，可适配 PDF 导出/打印场景的分页控制。
+
+**覆盖率**: 52/52 (100%)
 
 ---
 
@@ -569,7 +590,7 @@
 | 7 | 表格（GFM） | 11/11 | 0 | 100% |
 | 8 | HTML 块 | 10/10 | 0 | 100% |
 | 9 | 链接引用定义 | 12/12 | 0 | 100% |
-| 10 | 块级扩展 | 41/41 | 0 | 100% |
+| 10 | 块级扩展 | 52/52 | 0 | 100% |
 | 11 | 强调 | 13/13 | 0 | 100% |
 | 12 | 删除线（GFM） | 4/4 | 0 | 100% |
 | 13 | 行内代码 | 8/8 | 0 | 100% |
@@ -581,7 +602,7 @@
 | 19 | 行内扩展 | 21/21 | 0 | 100% |
 | 20 | 流式解析引擎 | 27/27 | 0 | 100% |
 | 21 | 字符与编码 | 6/6 | 0 | 100% |
-| | **总计** | **284/284** | **0** | **100%** |
+| | **总计** | **295/295** | **0** | **100%** |
 
 ---
 
@@ -604,11 +625,9 @@
 
 ### 一、块级结构扩展
 
-| 优先级 | 特性 | 语法示例 | 说明 |
-|--------|------|----------|------|
-| **P2** | 多列布局 | `:::columns\n:::column{width=50%}\n左列\n:::column{width=50%}\n右列\n:::` | 基于已实现的自定义容器语法，识别 `columns`/`column` 容器类型并解析列宽属性，维护列布局 AST 结构，解决 Markdown 原生无布局能力的痛点 |
-| **P2** | 目录高级配置 | `[TOC]\n:depth=2-4\n:exclude=#ignore\n:order=asc` | 解析 TOC 后的配置参数（深度范围、排除 ID、排序方式、ID 前缀），生成目录时按配置过滤/排序标题节点，满足精细化目录需求 |
-| **P3** | 分页符 | `***pagebreak***` | 解析分页符标记生成 `PageBreak` AST 节点，渲染器据此插入分页样式，针对 PDF 导出/打印场景 |
+> **备注**: 多列布局、目录高级配置、分页符已实现，详见第 10 章「块级结构 — 扩展」。
+
+目前无待实现的块级结构扩展。
 
 ### 二、行内元素扩展
 
