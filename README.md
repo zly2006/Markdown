@@ -170,7 +170,7 @@ Add dependencies in `gradle/libs.versions.toml`:
 
 ```toml
 [versions]
-markdown = "1.0.0"
+markdown = "1.0.3"
 
 [libraries]
 markdown-parser = { module = "io.github.huarangmeng:markdown-parser", version.ref = "markdown" }
