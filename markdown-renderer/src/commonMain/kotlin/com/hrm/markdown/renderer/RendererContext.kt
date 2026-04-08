@@ -5,6 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import com.hrm.codehigh.theme.CodeTheme
 import com.hrm.markdown.parser.ast.Document
 
 /**
@@ -31,12 +32,15 @@ internal val LocalRendererDocument = compositionLocalOf { Document() }
  */
 internal val LocalMarkdownConfig = compositionLocalOf { MarkdownConfig.Default }
 
+internal val LocalCodeHighlightTheme = compositionLocalOf<CodeTheme?> { null }
+
 @Composable
 internal fun ProvideRendererContext(
     document: Document,
     onLinkClick: ((String) -> Unit)?,
     imageContent: MarkdownImageRenderer? = null,
     config: MarkdownConfig = MarkdownConfig.Default,
+    codeTheme: CodeTheme? = null,
     content: @Composable () -> Unit,
 ) {
     // 用 rememberUpdatedState 包装 onLinkClick：
@@ -57,6 +61,7 @@ internal fun ProvideRendererContext(
         LocalRendererDocument provides document,
         LocalImageRenderer provides imageContent,
         LocalMarkdownConfig provides config,
+        LocalCodeHighlightTheme provides codeTheme,
     ) {
         content()
     }

@@ -6,11 +6,14 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.rememberTextMeasurer
+import com.hrm.codehigh.theme.LocalCodeTheme
 import com.hrm.markdown.parser.ast.Image
 import com.hrm.markdown.parser.ast.Node
 import com.hrm.markdown.parser.ast.Paragraph
 import com.hrm.markdown.parser.ast.Text
 import com.hrm.markdown.renderer.DefaultMarkdownImage
+import com.hrm.markdown.renderer.LocalCodeHighlightTheme
 import com.hrm.markdown.renderer.LocalImageRenderer
 import com.hrm.markdown.renderer.LocalMarkdownTheme
 import com.hrm.markdown.renderer.LocalOnLinkClick
@@ -88,6 +91,8 @@ private fun MixedParagraphRenderer(
     val customRenderer = LocalImageRenderer.current
     val latexMeasurer = rememberLatexMeasurer()
     val density = androidx.compose.ui.platform.LocalDensity.current
+    val textMeasurer = rememberTextMeasurer()
+    val codeTheme = LocalCodeHighlightTheme.current ?: LocalCodeTheme.current
 
     // 将段落子节点拆分为文本段和图片段
     val segments = remember(node) { splitParagraphSegments(node.children) }
@@ -98,7 +103,7 @@ private fun MixedParagraphRenderer(
                 is ParagraphSegment.TextRun -> {
                     val inlineContents = mutableMapOf<String, androidx.compose.foundation.text.InlineTextContent>()
                     val annotated = buildInlineAnnotatedString(
-                        segment.nodes, theme, inlineContents, onLinkClick, latexMeasurer, density
+                        segment.nodes, theme, inlineContents, onLinkClick, latexMeasurer, density, textMeasurer, codeTheme
                     )
                     if (annotated.isNotEmpty()) {
                         BasicText(

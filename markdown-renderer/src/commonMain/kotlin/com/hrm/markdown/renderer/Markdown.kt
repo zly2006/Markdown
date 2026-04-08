@@ -23,6 +23,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import com.hrm.codehigh.theme.CodeTheme
 import com.hrm.markdown.parser.MarkdownParser
 import com.hrm.markdown.parser.ast.BlankLine
 import com.hrm.markdown.parser.ast.ContainerNode
@@ -77,6 +78,7 @@ fun Markdown(
     markdown: String,
     modifier: Modifier = Modifier,
     theme: MarkdownTheme = MarkdownTheme.auto(),
+    codeTheme: CodeTheme? = null,
     config: MarkdownConfig = MarkdownConfig.Default,
     scrollState: ScrollState = rememberScrollState(),
     isStreaming: Boolean = false,
@@ -99,6 +101,7 @@ fun Markdown(
             document = document,
             modifier = modifier,
             theme = theme,
+            codeTheme = codeTheme,
             config = config,
             scrollState = scrollState,
             isStreaming = isStreaming,
@@ -182,6 +185,7 @@ private fun InnerMarkdown(
     document: Document,
     modifier: Modifier = Modifier,
     theme: MarkdownTheme = MarkdownTheme.auto(),
+    codeTheme: CodeTheme? = null,
     config: MarkdownConfig = MarkdownConfig.Default,
     scrollState: ScrollState = rememberScrollState(),
     isStreaming: Boolean = false,
@@ -271,6 +275,7 @@ private fun InnerMarkdown(
             onLinkClick = onLinkClick,
             imageContent = imageContent,
             config = config,
+            codeTheme = codeTheme,
         ) {
             // 流式生成期间跳过 SelectionContainer：
             // SelectionContainer 在内容高频变化时会对内部布局做额外的 intrinsic 测量
