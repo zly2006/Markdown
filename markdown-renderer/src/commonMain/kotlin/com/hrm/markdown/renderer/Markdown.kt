@@ -136,51 +136,99 @@ private fun rememberStreamingDocument(
             enableLinting = config.enableLinting,
         )
     }
-    var lastParsedLength by remember { mutableStateOf(0) }
-    var document by remember { mutableStateOf<Document?>(null) }
-    var wasStreaming by remember { mutableStateOf(false) }
-    var lastNonStreamingMarkdown by remember { mutableStateOf("") }
+    var state by remember(parser) { mutableStateOf(StreamingDocumentState<Document>()) }
 
-    // 流式状态变化检测
-    LaunchedEffect(isStreaming) {
-        if (isStreaming && !wasStreaming) {
-            // 进入流式模式，重置状态
-            parser.beginStream()
-            lastParsedLength = 0
-            document = null
-        } else if (!isStreaming && wasStreaming) {
-            // 流式结束，完成解析
-            document = parser.endStream()
-            lastNonStreamingMarkdown = markdown
-        }
-        wasStreaming = isStreaming
-    }
-
-    // 内容变化处理
-    LaunchedEffect(markdown, isStreaming) {
-        if (isStreaming) {
-            // 流式模式：增量追加
-            if (markdown.length > lastParsedLength) {
-                val chunk = markdown.substring(lastParsedLength)
-                if (chunk.isNotEmpty()) {
-                    document = parser.append(chunk)
-                    lastParsedLength = markdown.length
+    LaunchedEffect(markdown, isStreaming, parser) {
+        state = updateStreamingDocumentState(
+            markdown = markdown,
+            isStreaming = isStreaming,
+            state = state,
+            beginStream = parser::beginStream,
+            append = parser::append,
+            endStream = parser::endStream,
+            parse = { value ->
+                if (value.isEmpty()) {
+                    null
+                } else {
+                    withContext(Dispatchers.Default) {
+                        parser.parse(value)
+                    }
                 }
             }
-        } else if (markdown != lastNonStreamingMarkdown) {
-            // 非流式模式：内容变化时全量解析
-            if (markdown.isEmpty()) {
-                document = null
-            } else {
-                withContext(Dispatchers.Default) {
-                    document = parser.parse(markdown)
-                }
-            }
-            lastNonStreamingMarkdown = markdown
-        }
+        )
     }
 
-    return document
+    return state.document
+}
+
+internal data class StreamingDocumentState<T>(
+    val lastParsedLength: Int = 0,
+    val document: T? = null,
+    val wasStreaming: Boolean = false,
+    val lastNonStreamingMarkdown: String = "",
+)
+
+internal suspend fun <T> updateStreamingDocumentState(
+    markdown: String,
+    isStreaming: Boolean,
+    state: StreamingDocumentState<T>,
+    beginStream: () -> Unit,
+    append: (String) -> T,
+    endStream: () -> T,
+    parse: suspend (String) -> T?,
+): StreamingDocumentState<T> {
+    var nextState = state
+
+    if (isStreaming && !nextState.wasStreaming) {
+        beginStream()
+        nextState = nextState.copy(
+            lastParsedLength = 0,
+            document = null,
+            wasStreaming = true,
+        )
+    }
+
+    if (isStreaming) {
+        if (markdown.length > nextState.lastParsedLength) {
+            val chunk = markdown.substring(nextState.lastParsedLength)
+            if (chunk.isNotEmpty()) {
+                nextState = nextState.copy(
+                    document = append(chunk),
+                    lastParsedLength = markdown.length,
+                )
+            }
+        }
+        return nextState.copy(wasStreaming = true)
+    }
+
+    if (nextState.wasStreaming) {
+        if (markdown.length > nextState.lastParsedLength) {
+            val chunk = markdown.substring(nextState.lastParsedLength)
+            if (chunk.isNotEmpty()) {
+                nextState = nextState.copy(
+                    document = append(chunk),
+                    lastParsedLength = markdown.length,
+                )
+            }
+        }
+        return nextState.copy(
+            document = endStream(),
+            lastParsedLength = markdown.length,
+            wasStreaming = false,
+            lastNonStreamingMarkdown = markdown,
+        )
+    }
+
+    if (markdown == nextState.lastNonStreamingMarkdown) {
+        return nextState.copy(wasStreaming = false)
+    }
+
+    return nextState.copy(
+        document = parse(markdown),
+        lastParsedLength = markdown.length,
+        wasStreaming = false,
+        lastNonStreamingMarkdown = markdown,
+    )
 }
 
 @Composable
