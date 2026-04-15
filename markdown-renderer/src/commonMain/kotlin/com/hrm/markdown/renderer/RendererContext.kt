@@ -46,16 +46,13 @@ internal fun ProvideRendererContext(
     content: @Composable () -> Unit,
 ) {
     // 用 rememberUpdatedState 包装 onLinkClick：
-    // - stableOnLinkClick 是一个 remember 的稳定 lambda 引用（对象不变）
-    // - 内部通过 State 读取始终最新的 onLinkClick
+    // - stableOnLinkClick 始终是一个 remember 的稳定 lambda 引用（对象不变）
+    // - 即使当前 onLinkClick 为 null，wrapper 也只是空操作，不会锁死后续更新
+    // - wrapper 内部通过 State 读取始终最新的 onLinkClick
     // - compositionLocalOf 比较引用 === 发现没变 → 跳过下游重组
     val currentOnLinkClick = rememberUpdatedState(onLinkClick)
-    val stableOnLinkClick: ((String) -> Unit)? = remember {
-        if (onLinkClick != null) {
-            { url: String -> currentOnLinkClick.value?.invoke(url) }
-        } else {
-            null
-        }
+    val stableOnLinkClick: (String) -> Unit = remember {
+        { url: String -> currentOnLinkClick.value?.invoke(url) }
     }
 
     CompositionLocalProvider(
