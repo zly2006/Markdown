@@ -6,7 +6,7 @@
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.10-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.10.1-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.huarangmeng/markdown-parser.svg?color=orange&label=Maven%20Central)](https://central.sonatype.com/search?q=io.github.huarangmeng.markdown)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.zly2006/markdown-parser.svg?color=orange&label=Maven%20Central)](https://central.sonatype.com/search?q=io.github.zly2006.markdown)
 [![CommonMark](https://img.shields.io/badge/CommonMark%200.31.2-652%2F652%20✓-brightgreen)](https://spec.commonmark.org/0.31.2/)
 [![Android API](https://img.shields.io/badge/Android%20API-23%2B-34A853?logo=android&logoColor=white)](https://android-arsenal.com/api?level=24)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -71,11 +71,11 @@
 
 ```toml
 [versions]
-markdown = "1.0.3"
+markdown = "0.0.1-alpha.2"
 
 [libraries]
-markdown-parser = { module = "io.github.huarangmeng:markdown-parser", version.ref = "markdown" }
-markdown-renderer = { module = "io.github.huarangmeng:markdown-renderer", version.ref = "markdown" }
+markdown-parser = { module = "io.github.zly2006:markdown-parser", version.ref = "markdown" }
+markdown-renderer = { module = "io.github.zly2006:markdown-renderer", version.ref = "markdown" }
 ```
 
 在模块的 `build.gradle.kts` 中引用：
