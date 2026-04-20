@@ -8,7 +8,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FootnoteNavigationStateTest {
-
     @Test
     fun should_register_definition_requester_for_label() {
         val state = FootnoteNavigationState()

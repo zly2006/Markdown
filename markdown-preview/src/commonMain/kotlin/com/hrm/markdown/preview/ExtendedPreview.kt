@@ -1,6 +1,7 @@
 package com.hrm.markdown.preview
 
 import com.hrm.markdown.renderer.Markdown
+import androidx.compose.material3.Text
 
 private val footnoteJumpLipsumMarkdown = """
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.[^journey] Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
@@ -50,6 +51,17 @@ internal val extendedPreviewGroups = listOf(
                 title = "长文脚注跳转（Lipsum）",
                 content = {
                     Markdown(markdown = footnoteJumpLipsumMarkdown)
+                }
+            ),
+            PreviewItem(
+                id = "footnote_jump_external_scroll",
+                title = "头尾插槽 + 脚注跳转",
+                content = {
+                    Markdown(
+                        markdown = footnoteJumpLipsumMarkdown,
+                        header = { Text("AAA (header slot)") },
+                        footer = { Text("CCC (footer slot)") },
+                    )
                 }
             ),
         )
