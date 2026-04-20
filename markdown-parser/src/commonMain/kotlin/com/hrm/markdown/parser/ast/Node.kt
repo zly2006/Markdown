@@ -32,7 +32,7 @@ sealed class Node {
      * 注意：不包含 contentHash，因为流式输入时内容每个 token 都在变，
      * 如果 key 跟着变，Compose 会销毁旧组件再创建新组件，导致"闪缩"和状态丢失。
      */
-    val stableKey: Int
+    open val stableKey: Int
         get() = lineRange.startLine
 
     /**

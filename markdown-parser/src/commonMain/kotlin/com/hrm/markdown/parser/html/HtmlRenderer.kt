@@ -409,6 +409,10 @@ class HtmlRenderer(
         // 不输出到 HTML（元数据）
     }
 
+    override fun visitNativeBlock(node: NativeBlock) {
+        // NativeBlock 仅供 Compose 渲染器消费，HTML 导出时跳过。
+    }
+
     override fun visitBlankLine(node: BlankLine) {
         // 不输出
     }

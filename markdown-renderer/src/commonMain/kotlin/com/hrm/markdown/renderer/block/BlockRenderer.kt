@@ -69,6 +69,7 @@ internal fun BlockRenderer(
         is TabBlock -> TabBlockRenderer(node, modifier)
         is BibliographyDefinition -> BibliographyDefinitionRenderer(node, modifier)
         is Figure -> FigureRenderer(node, modifier)
+        is NativeBlock -> node.content()
         is FrontMatter -> { /* FrontMatter 通常不渲染 */ }
         is LinkReferenceDefinition -> { /* 引用定义不直接渲染 */ }
         is AbbreviationDefinition -> { /* 缩写定义不直接渲染 */ }
