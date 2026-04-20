@@ -50,7 +50,7 @@ mavenPublishing {
     signAllPublications()
 
     coordinates(
-        "io.github.huarangmeng",
+        "io.github.zly2006",
         "markdown-parser",
         rootProject.property("VERSION").toString()
     )
@@ -67,7 +67,7 @@ mavenPublishing {
         """.trimIndent()
         )
         inceptionYear.set("2026")
-        url.set("https://github.com/huarangmeng/Markdown")
+        url.set("https://github.com/zly2006/Markdown")
         licenses {
             license {
                 name.set("MIT License")
@@ -77,15 +77,15 @@ mavenPublishing {
         }
         developers {
             developer {
-                id.set("huarangmeng")
-                name.set("Kotlin Multiplatform Specialist")
-                url.set("https://github.com/huarangmeng/")
+                id.set("zly2006")
+                name.set("zly2006")
+                url.set("https://github.com/zly2006/")
             }
         }
         scm {
-            url.set("https://github.com/huarangmeng/Markdown")
-            connection.set("scm:git:git://github.com/huarangmeng/Markdown.git")
-            developerConnection.set("scm:git:ssh://git@github.com/huarangmeng/Markdown.git")
+            url.set("https://github.com/zly2006/Markdown")
+            connection.set("scm:git:git://github.com/zly2006/Markdown.git")
+            developerConnection.set("scm:git:ssh://git@github.com/zly2006/Markdown.git")
         }
     }
 }
