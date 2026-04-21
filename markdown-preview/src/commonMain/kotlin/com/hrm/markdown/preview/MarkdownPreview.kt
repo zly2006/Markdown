@@ -65,6 +65,13 @@ data class PreviewItem(
  */
 val previewCategories: List<PreviewCategory> = listOf(
     PreviewCategory(
+        id = "appearance",
+        title = "主题/外观",
+        description = "强制暗色模式等主题展示",
+        icon = "🌙",
+        groups = themePreviewGroups
+    ),
+    PreviewCategory(
         id = "streaming",
         title = "流式渲染",
         description = "模拟 LLM 逐 token 输出的流式增量解析与渲染",

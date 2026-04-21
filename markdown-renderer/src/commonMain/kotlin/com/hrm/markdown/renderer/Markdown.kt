@@ -76,7 +76,10 @@ private const val TAG_RENDER = "MarkdownRender"
  * @param config 解析配置，控制 Markdown 方言（Flavour）和解析行为，默认使用 [MarkdownConfig.Default]（ExtendedFlavour 全功能）
  * @param scrollState 滚动状态，外部可控制滚动位置
  * @param enablePagination 是否启用分页加载，适合超长文档（> 500 段落）
+ * @param enableScroll 是否启用 Markdown 内部滚动容器
  * @param initialBlockCount 分页模式下初始渲染的块数量
+ * @param header Markdown 内容前方插槽，会和正文处于同一滚动容器中
+ * @param footer Markdown 内容后方插槽，会和正文处于同一滚动容器中
  * @param imageContent 自定义图片渲染组件，null 则使用默认占位渲染
  * @param onLinkClick 链接点击回调
  * @param directivePlugins Markdown 指令插件列表，用于接入输入转换器和 directive 自定义渲染器
@@ -93,6 +96,8 @@ fun Markdown(
     enablePagination: Boolean = false,
     enableScroll: Boolean = true,
     initialBlockCount: Int = 100,
+    header: (@Composable () -> Unit)? = null,
+    footer: (@Composable () -> Unit)? = null,
     imageContent: MarkdownImageRenderer? = null,
     onLinkClick: ((String) -> Unit)? = null,
     directivePlugins: List<MarkdownDirectivePlugin> = emptyList(),
@@ -124,6 +129,8 @@ fun Markdown(
             enablePagination = enablePagination,
             enableScroll = enableScroll,
             initialBlockCount = initialBlockCount,
+            header = header,
+            footer = footer,
             imageContent = imageContent,
             onLinkClick = onLinkClick,
             directiveRegistry = directiveRegistry,
@@ -140,7 +147,10 @@ fun Markdown(
  * @param config 解析配置，控制 Markdown 方言（Flavour）和解析行为，默认使用 [MarkdownConfig.Default]（ExtendedFlavour 全功能）
  * @param scrollState 滚动状态，外部可控制滚动位置
  * @param enablePagination 是否启用分页加载，适合超长文档（> 500 段落）
+ * @param enableScroll 是否启用 Markdown 内部滚动容器
  * @param initialBlockCount 分页模式下初始渲染的块数量
+ * @param header Markdown 内容前方插槽，会和正文处于同一滚动容器中
+ * @param footer Markdown 内容后方插槽，会和正文处于同一滚动容器中
  * @param imageContent 自定义图片渲染组件，null 则使用默认占位渲染
  * @param onLinkClick 链接点击回调
  * @param directivePlugins Markdown 指令插件列表，用于接入 directive 自定义渲染器
@@ -157,6 +167,8 @@ fun Markdown(
     enablePagination: Boolean = false,
     enableScroll: Boolean = true,
     initialBlockCount: Int = 100,
+    header: (@Composable () -> Unit)? = null,
+    footer: (@Composable () -> Unit)? = null,
     imageContent: MarkdownImageRenderer? = null,
     onLinkClick: ((String) -> Unit)? = null,
     directivePlugins: List<MarkdownDirectivePlugin> = emptyList(),
@@ -173,6 +185,8 @@ fun Markdown(
         enablePagination = enablePagination,
         enableScroll = enableScroll,
         initialBlockCount = initialBlockCount,
+        header = header,
+        footer = footer,
         imageContent = imageContent,
         onLinkClick = onLinkClick,
         directiveRegistry = directiveRegistry,
@@ -302,6 +316,8 @@ private fun InnerMarkdown(
     enablePagination: Boolean = false,
     enableScroll: Boolean = true,
     initialBlockCount: Int = 100,
+    header: (@Composable () -> Unit)? = null,
+    footer: (@Composable () -> Unit)? = null,
     imageContent: MarkdownImageRenderer? = null,
     onLinkClick: ((String) -> Unit)? = null,
     directiveRegistry: MarkdownDirectiveRegistry = MarkdownDirectiveRegistry.Empty,
@@ -409,10 +425,7 @@ private fun InnerMarkdown(
                 val returnPosition = footnoteNavigationState.getReturnPosition(label)
                 if (returnPosition != null && enableScroll) {
                     scrollState.animateScrollTo(returnPosition)
-                    return@launch
                 }
-
-                footnoteNavigationState.bringReferenceIntoView(label)
             }
             Unit
         }
@@ -435,11 +448,8 @@ private fun InnerMarkdown(
             // SelectionContainer 在内容高频变化时会对内部布局做额外的 intrinsic 测量
             // （用于计算选择手柄位置），叠加代码块等长内容的重组，加重布局抖动。
             // 流式结束后恢复 SelectionContainer，用户可以正常选择文本。
-            val content: @Composable () -> Unit = {
+            val markdownBody: @Composable () -> Unit = {
                 Column(
-                    modifier = modifier
-                        .then(if (enableScroll) Modifier.verticalScroll(scrollState) else Modifier)
-                        .graphicsLayer { },
                     verticalArrangement = Arrangement.spacedBy(theme.blockSpacing),
                 ) {
                     for (node in renderBlocks) {
@@ -452,13 +462,21 @@ private fun InnerMarkdown(
                     }
                 }
             }
-
-            if (isStreaming) {
-                content()
-            } else {
-                SelectionContainer {
-                    content()
+            Column(
+                modifier = modifier
+                    .then(if (enableScroll) Modifier.verticalScroll(scrollState) else Modifier)
+                    .graphicsLayer { },
+                verticalArrangement = Arrangement.spacedBy(theme.blockSpacing),
+            ) {
+                header?.invoke()
+                if (isStreaming) {
+                    markdownBody()
+                } else {
+                    SelectionContainer {
+                        markdownBody()
+                    }
                 }
+                footer?.invoke()
             }
         }
     }
