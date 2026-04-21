@@ -255,21 +255,17 @@ class InlineParserTest {
     @Test
     fun should_parse_image() {
         val doc = parser.parse("![alt text](image.png)")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals("image.png", img.destination)
+        val figure = doc.children.first()
+        assertIs<Figure>(figure)
+        assertEquals("image.png", figure.imageUrl)
     }
 
     @Test
     fun should_parse_image_with_title() {
         val doc = parser.parse("![alt](img.png \"Title\")")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals("Title", img.title)
+        val figure = doc.children.first()
+        assertIs<Figure>(figure)
+        assertEquals("Title", figure.caption)
     }
 
     // ────── Escapes ──────
@@ -657,65 +653,50 @@ class ImageAdvancedFeatureTest {
 
     private val parser = MarkdownParser()
 
+    private fun parseFigure(markdown: String): Figure {
+        val node = parser.parse(markdown).children.first()
+        return assertIs<Figure>(node)
+    }
+
     // ────── =WxH 尺寸语法 ──────
 
     @Test
     fun should_parse_image_with_width_and_height() {
-        val doc = parser.parse("![alt](image.png =200x300)")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals("image.png", img.destination)
-        assertEquals(200, img.imageWidth)
-        assertEquals(300, img.imageHeight)
+        val figure = parseFigure("![alt](image.png =200x300)")
+        assertEquals("image.png", figure.imageUrl)
+        assertEquals(200, figure.imageWidth)
+        assertEquals(300, figure.imageHeight)
     }
 
     @Test
     fun should_parse_image_with_width_only() {
-        val doc = parser.parse("![alt](image.png =200x)")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals(200, img.imageWidth)
-        assertNull(img.imageHeight)
+        val figure = parseFigure("![alt](image.png =200x)")
+        assertEquals(200, figure.imageWidth)
+        assertNull(figure.imageHeight)
     }
 
     @Test
     fun should_parse_image_with_height_only() {
-        val doc = parser.parse("![alt](image.png =x300)")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertNull(img.imageWidth)
-        assertEquals(300, img.imageHeight)
+        val figure = parseFigure("![alt](image.png =x300)")
+        assertNull(figure.imageWidth)
+        assertEquals(300, figure.imageHeight)
     }
 
     @Test
     fun should_parse_image_with_size_and_title() {
-        val doc = parser.parse("![alt](image.png =200x300 \"My Title\")")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals("image.png", img.destination)
-        assertEquals(200, img.imageWidth)
-        assertEquals(300, img.imageHeight)
-        assertEquals("My Title", img.title)
+        val figure = parseFigure("![alt](image.png =200x300 \"My Title\")")
+        assertEquals("image.png", figure.imageUrl)
+        assertEquals(200, figure.imageWidth)
+        assertEquals(300, figure.imageHeight)
+        assertEquals("My Title", figure.caption)
     }
 
     @Test
     fun should_parse_image_without_size() {
-        val doc = parser.parse("![alt](image.png)")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals("image.png", img.destination)
-        assertNull(img.imageWidth)
-        assertNull(img.imageHeight)
+        val figure = parseFigure("![alt](image.png)")
+        assertEquals("image.png", figure.imageUrl)
+        assertNull(figure.imageWidth)
+        assertNull(figure.imageHeight)
     }
 
     @Test
@@ -732,93 +713,61 @@ class ImageAdvancedFeatureTest {
 
     @Test
     fun should_parse_image_with_css_class() {
-        val doc = parser.parse("![alt](image.png){.rounded}")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals("image.png", img.destination)
-        assertTrue(img.cssClasses.contains("rounded"))
+        val figure = parseFigure("![alt](image.png){.rounded}")
+        assertEquals("image.png", figure.imageUrl)
+        assertEquals("rounded", figure.attributes["class"])
     }
 
     @Test
     fun should_parse_image_with_css_id() {
-        val doc = parser.parse("![alt](image.png){#hero-image}")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals("hero-image", img.cssId)
+        val figure = parseFigure("![alt](image.png){#hero-image}")
+        assertEquals("hero-image", figure.attributes["id"])
     }
 
     @Test
     fun should_parse_image_with_multiple_classes_and_id() {
-        val doc = parser.parse("![alt](image.png){.rounded .shadow #img1}")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertTrue(img.cssClasses.contains("rounded"))
-        assertTrue(img.cssClasses.contains("shadow"))
-        assertEquals("img1", img.cssId)
+        val figure = parseFigure("![alt](image.png){.rounded .shadow #img1}")
+        assertTrue(figure.attributes["class"]?.contains("rounded") == true)
+        assertTrue(figure.attributes["class"]?.contains("shadow") == true)
+        assertEquals("img1", figure.attributes["id"])
     }
 
     @Test
     fun should_parse_image_with_key_value_attributes() {
-        val doc = parser.parse("![alt](image.png){loading=lazy align=right}")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals("lazy", img.attributes["loading"])
-        assertEquals("right", img.attributes["align"])
+        val figure = parseFigure("![alt](image.png){loading=lazy align=right}")
+        assertEquals("lazy", figure.attributes["loading"])
+        assertEquals("right", figure.attributes["align"])
     }
 
     @Test
     fun should_parse_image_with_quoted_attribute_value() {
-        val doc = parser.parse("![alt](image.png){loading=\"lazy\" title=\"My Image\"}")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals("lazy", img.attributes["loading"])
-        assertEquals("My Image", img.attributes["title"])
+        val figure = parseFigure("![alt](image.png){loading=\"lazy\" title=\"My Image\"}")
+        assertEquals("lazy", figure.attributes["loading"])
+        assertEquals("My Image", figure.attributes["title"])
     }
 
     @Test
     fun should_parse_image_with_size_and_attributes() {
-        val doc = parser.parse("![alt](image.png =200x300){.rounded loading=lazy}")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals(200, img.imageWidth)
-        assertEquals(300, img.imageHeight)
-        assertTrue(img.cssClasses.contains("rounded"))
-        assertEquals("lazy", img.attributes["loading"])
+        val figure = parseFigure("![alt](image.png =200x300){.rounded loading=lazy}")
+        assertEquals(200, figure.imageWidth)
+        assertEquals(300, figure.imageHeight)
+        assertTrue(figure.attributes["class"]?.contains("rounded") == true)
+        assertEquals("lazy", figure.attributes["loading"])
     }
 
     @Test
     fun should_parse_image_with_size_title_and_attributes() {
-        val doc = parser.parse("![alt](image.png =200x300 \"Title\"){.rounded}")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals(200, img.imageWidth)
-        assertEquals(300, img.imageHeight)
-        assertEquals("Title", img.title)
-        assertTrue(img.cssClasses.contains("rounded"))
+        val figure = parseFigure("![alt](image.png =200x300 \"Title\"){.rounded}")
+        assertEquals(200, figure.imageWidth)
+        assertEquals(300, figure.imageHeight)
+        assertEquals("Title", figure.caption)
+        assertTrue(figure.attributes["class"]?.contains("rounded") == true)
     }
 
     @Test
     fun should_handle_image_without_attributes() {
-        val doc = parser.parse("![alt](image.png)")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertTrue(img.attributes.isEmpty())
+        val figure = parseFigure("![alt](image.png)")
+        assertTrue(figure.attributes.isEmpty())
     }
 
     // ────── 边界情况 ──────
@@ -826,14 +775,10 @@ class ImageAdvancedFeatureTest {
     @Test
     fun should_handle_image_with_url_containing_equals() {
         // URL 中包含 = 但不是尺寸语法（没有 x 分隔符）
-        val doc = parser.parse("![alt](https://example.com/img?w=100)")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
+        val figure = parseFigure("![alt](https://example.com/img?w=100)")
         // URL 参数中的 = 属于 URL 的一部分，不应被解析为尺寸
-        assertNull(img.imageWidth)
-        assertNull(img.imageHeight)
+        assertNull(figure.imageWidth)
+        assertNull(figure.imageHeight)
     }
 
     @Test
@@ -849,24 +794,16 @@ class ImageAdvancedFeatureTest {
 
     @Test
     fun should_parse_image_with_angle_bracket_url_and_size() {
-        val doc = parser.parse("![alt](<https://example.com/img.png> =200x300)")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals("https://example.com/img.png", img.destination)
-        assertEquals(200, img.imageWidth)
-        assertEquals(300, img.imageHeight)
+        val figure = parseFigure("![alt](<https://example.com/img.png> =200x300)")
+        assertEquals("https://example.com/img.png", figure.imageUrl)
+        assertEquals(200, figure.imageWidth)
+        assertEquals(300, figure.imageHeight)
     }
 
     @Test
     fun should_parse_image_with_single_quote_attributes() {
-        val doc = parser.parse("![alt](image.png){loading='lazy'}")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        val img = para.children.first()
-        assertIs<Image>(img)
-        assertEquals("lazy", img.attributes["loading"])
+        val figure = parseFigure("![alt](image.png){loading='lazy'}")
+        assertEquals("lazy", figure.attributes["loading"])
     }
 }
 

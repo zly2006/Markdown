@@ -111,7 +111,7 @@ class FlavourCompatibilityTest {
         assertTrue(starters.any { it is FootnoteDefinitionStarter })
         assertTrue(starters.any { it is DefinitionDescriptionStarter })
         assertTrue(starters.any { it is PageBreakStarter })
-        assertTrue(starters.any { it is ShortcodeBlockStarter })
+        assertTrue(starters.any { it is DirectiveBlockStarter })
     }
 
     @Test
@@ -187,8 +187,8 @@ class FlavourCompatibilityTest {
     }
 
     @Test
-    fun extra_should_not_have_shortcodes() {
-        assertFalse(MarkdownExtraFlavour.blockStarters.any { it is ShortcodeBlockStarter })
+    fun extra_should_not_have_directives() {
+        assertFalse(MarkdownExtraFlavour.blockStarters.any { it is DirectiveBlockStarter })
     }
 
     @Test

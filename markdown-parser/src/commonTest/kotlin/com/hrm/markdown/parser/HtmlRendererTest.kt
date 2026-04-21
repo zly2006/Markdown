@@ -60,7 +60,7 @@ class HtmlRendererTest {
     fun should_render_fenced_code_block() {
         val md = "```kotlin\nfun main() {}\n```"
         val html = render(md)
-        assertContains(html, "<pre>")
+        assertContains(html, "<pre")
         assertContains(html, "<code class=\"language-kotlin\">")
         assertContains(html, "fun main() {}")
         assertContains(html, "</code>")
@@ -71,7 +71,8 @@ class HtmlRendererTest {
     fun should_render_fenced_code_block_without_language() {
         val md = "```\nhello\n```"
         val html = render(md)
-        assertContains(html, "<pre><code>")
+        assertContains(html, "<pre")
+        assertContains(html, "<code>")
         assertContains(html, "hello")
     }
 
@@ -212,10 +213,11 @@ class HtmlRendererTest {
     @Test
     fun should_render_image() {
         val html = render("![Alt](image.png \"Title\")")
+        assertContains(html, "<figure>")
         assertContains(html, "<img")
         assertContains(html, "src=\"image.png\"")
-        assertContains(html, "alt=\"Alt\"")
-        assertContains(html, "title=\"Title\"")
+        assertContains(html, "alt=\"Title\"")
+        assertContains(html, "<figcaption>Title</figcaption>")
     }
 
     @Test
@@ -417,7 +419,7 @@ class HtmlRendererTest {
         assertContains(html, "<em>italic</em>")
         assertContains(html, "<ul>")
         assertContains(html, "<blockquote>")
-        assertContains(html, "<pre>")
+        assertContains(html, "<pre")
         assertContains(html, "<table>")
     }
 

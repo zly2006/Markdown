@@ -42,6 +42,10 @@ class HtmlRenderer(
     val escapeHtml: Boolean = false,
     /** 是否使用 XHTML 风格自闭合标签 */
     val xhtml: Boolean = true,
+    /** 自定义块级 directive HTML fallback，返回 null 则走默认输出 */
+    val directiveBlockFallback: ((DirectiveBlock) -> String?)? = null,
+    /** 自定义行内 directive HTML fallback，返回 null 则走默认输出 */
+    val directiveInlineFallback: ((DirectiveInline) -> String?)? = null,
 ) : NodeVisitor<Unit> {
 
     private val sb = StringBuilder()
@@ -496,10 +500,18 @@ class HtmlRenderer(
         sb.append('\n')
     }
 
-    override fun visitShortcodeBlock(node: ShortcodeBlock) {
+    override fun visitDirectiveBlock(node: DirectiveBlock) {
+        val custom = directiveBlockFallback?.invoke(node)
+        if (custom != null) {
+            sb.append(custom)
+            if (!custom.endsWith('\n')) {
+                sb.append('\n')
+            }
+            return
+        }
         val argsStr = node.args.entries.joinToString(" ") { "${it.key}=${it.value}" }
         val attrs = mutableMapOf<String, String?>(
-            "data-shortcode" to node.tagName,
+            "data-directive" to node.tagName,
         )
         if (argsStr.isNotEmpty()) {
             attrs["data-args"] = argsStr
@@ -686,10 +698,15 @@ class HtmlRenderer(
         closeTag("kbd")
     }
 
-    override fun visitShortcodeInline(node: ShortcodeInline) {
+    override fun visitDirectiveInline(node: DirectiveInline) {
+        val custom = directiveInlineFallback?.invoke(node)
+        if (custom != null) {
+            sb.append(custom)
+            return
+        }
         val argsStr = node.args.entries.joinToString(" ") { "${it.key}=${it.value}" }
         val attrs = mutableMapOf<String, String?>(
-            "data-shortcode" to node.tagName,
+            "data-directive" to node.tagName,
         )
         if (argsStr.isNotEmpty()) {
             attrs["data-args"] = argsStr

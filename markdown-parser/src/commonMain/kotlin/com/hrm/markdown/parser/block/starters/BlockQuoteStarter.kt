@@ -15,6 +15,7 @@ internal class BlockQuoteStarter : BlockStarter {
     override fun tryStart(cursor: LineCursor, lineIdx: Int, tip: OpenBlock): OpenBlock? {
         val indent = cursor.advanceSpaces(3)
         if (cursor.isAtEnd || cursor.peek() != '>') return null
+        if (cursor.peek(1) == '!') return null
 
         cursor.advance()
         // skip optional space (or one column of a tab) after '>'

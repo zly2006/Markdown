@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.mavenPublish)
 }
@@ -10,7 +9,7 @@ kotlin {
     jvmToolchain(21)
 
     androidLibrary {
-        namespace = "com.hrm.markdown.renderer"
+        namespace = "com.hrm.markdown.runtime"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
     }
@@ -20,7 +19,7 @@ kotlin {
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "MarkdownRenderer"
+            baseName = "MarkdownRuntime"
             isStatic = true
         }
     }
@@ -39,41 +38,10 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(projects.markdownParser)
-            api(projects.markdownRuntime)
-
             implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.material3)
-            implementation(libs.compose.ui)
-            implementation(libs.compose.components.resources)
-
-            implementation(libs.bundles.latex)
-            implementation(libs.codehigh)
-
-            // 图片加载：Coil3 + Ktor3 网络引擎
-            implementation(libs.coil.compose)
-            implementation(libs.coil.network.ktor3)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
-            implementation(libs.kotlinx.coroutines.core)
-        }
-        androidMain.dependencies {
-            implementation(libs.ktor.client.android)
-        }
-        iosMain.dependencies {
-            implementation(libs.ktor.client.darwin)
-        }
-        jvmMain.dependencies {
-            implementation(libs.ktor.client.java)
-        }
-        jsMain.dependencies {
-            implementation(libs.ktor.client.js)
-        }
-        val wasmJsMain by getting {
-            dependencies {
-                implementation(libs.ktor.client.js)
-            }
         }
     }
 }
@@ -85,18 +53,18 @@ mavenPublishing {
 
     coordinates(
         "io.github.zly2006",
-        "markdown-renderer",
+        "markdown-runtime",
         rootProject.property("VERSION").toString()
     )
 
     pom {
-        name.set("Kotlin Multiplatform Markdown Renderer")
+        name.set("Kotlin Multiplatform Markdown Runtime")
         description.set(
             """
-            Cross-platform Markdown rendering solution with:
-            - Full Markdown syntax support
-            - Compose Multiplatform UI integration
-            - Custom rendering styles
+            Runtime extension layer for KMP Markdown with:
+            - Input transform pipeline
+            - Plugin registry
+            - Directive-based extension dispatch
             - Multi-platform support (Android/iOS/JVM/JS/WasmJS)
         """.trimIndent()
         )

@@ -621,7 +621,7 @@
 - ✅ `RubyText` AST 节点（LeafNode，携带 `base` 和 `annotation`）
 - ✅ 不跨行（遇到换行终止）
 - ✅ 空 base 或空 annotation 不解析
-- ✅ 不与 `{%` 短代码语法冲突
+- ✅ 不与 `{%` 指令语法冲突
 
 > **备注**: `InlineParser.appendPossibleRuby()` 在检测到 `{`（且下一字符非 `%`）时触发，扫描到 `}` 并检查 `|` 分隔符。渲染器通过 `InlineTextContent` 机制渲染为上方注音 + 下方基础文字的 Column 布局。
 
@@ -759,17 +759,17 @@
 
 ---
 
-## 24. 短代码（Shortcodes，扩展）
+## 24. 指令（Directives，扩展）
 
 ### ✅ 已支持
 
-#### 块级短代码
-- ✅ `{% tag args %}...{% endtag %}` 块级短代码（独占行，内容可跨多行）
+#### 块级指令
+- ✅ `{% tag args %}...{% endtag %}` 块级指令（独占行，内容可跨多行）
 - ✅ `{% endtag %}` 闭合标记（标签名须与开启标记匹配）
-- ✅ 块级短代码内支持嵌套 Markdown 块级元素解析
+- ✅ 块级指令内支持嵌套 Markdown 块级元素解析
 
-#### 行内短代码
-- ✅ `{% tag args %}` 行内短代码（不独占行时作为行内元素解析）
+#### 行内指令
+- ✅ `{% tag args %}` 行内指令（不独占行时作为行内元素解析）
 
 #### 参数解析
 - ✅ 位置参数（positional）：`{% youtube dQw4w9WgXcQ %}`
@@ -777,11 +777,49 @@
 - ✅ 键值对参数（key=value）：`{% img src="/photo.jpg" width=300 %}`
 
 #### AST 节点与渲染
-- ✅ `ShortcodeBlock` AST 节点（块级短代码，携带 tag、arguments、body）
-- ✅ `ShortcodeInline` AST 节点（行内短代码，携带 tag、arguments）
-- ✅ `HtmlRenderer` 输出 `data-shortcode` 属性（`<div data-shortcode="tag">` / `<span data-shortcode="tag">`）
+- ✅ `DirectiveBlock` AST 节点（块级指令，携带 tag、arguments、body）
+- ✅ `DirectiveInline` AST 节点（行内指令，携带 tag、arguments）
+- ✅ `HtmlRenderer` 输出 `data-directive` 属性（`<div data-directive="tag">` / `<span data-directive="tag">`）
 
-> **备注**: 短代码解析器（`ShortcodeStarter` 块级 + `InlineParser` 行内）识别 `{% ... %}` 语法，解析标签名和参数列表。参数解析器支持三种格式混用：裸字符串位置参数、双引号/单引号字符串、`key=value` 键值对。块级短代码通过 `{% endtag %}` 闭合，行内短代码为自闭合。渲染器通过 `data-shortcode` 属性将短代码语义传递给前端，便于 JS 插件进一步处理。
+> **备注**: 指令解析器（`DirectiveBlockStarter` 块级 + `InlineParser` 行内）识别 `{% ... %}` 语法，解析标签名和参数列表。参数解析器支持三种格式混用：裸字符串位置参数、双引号/单引号字符串、`key=value` 键值对。块级指令通过 `{% endtag %}` 闭合，行内指令为自闭合。渲染器通过 `data-directive` 属性将指令语义传递给前端，便于 JS 插件进一步处理。
+
+#### Runtime / Renderer 集成
+- ✅ `markdown-runtime` 提供 `MarkdownDirectivePlugin`、`MarkdownDirectiveRegistry`、`MarkdownDirectivePipeline`
+- ✅ 输入转换器可将业务语法规范化为官方 directive，再进入 parser
+- ✅ Compose 侧支持 block / inline directive 原生渲染
+- ✅ HTML 导出支持 block / inline directive fallback
+- ✅ `MarkdownHtml.render(document, directivePlugins)` 与字符串入口共用同一条 directive 运行时链路
+- ✅ 流式模式下只要存在 transformer，就自动关闭 streaming fast path，保证转换正确性
+
+#### 当前用法
+
+```kotlin
+object VideoDirectivePlugin : MarkdownDirectivePlugin {
+    override val id: String = "video"
+
+    override val inputTransformers = listOf(VideoSyntaxTransformer())
+
+    override val blockDirectiveRenderers = mapOf(
+        "video" to { scope ->
+            VideoPlayer(
+                url = scope.args.getValue("url"),
+                poster = scope.args["poster"],
+                title = scope.args["title"],
+            )
+        }
+    )
+}
+
+Markdown(
+    markdown = markdown,
+    directivePlugins = listOf(VideoDirectivePlugin),
+)
+```
+
+#### 完成状态
+- ✅ directive 扩展架构已完成落地
+- ✅ parser 保持纯 AST，不引入 Compose 节点
+- ✅ runtime / renderer / preview / README 已全部切换到 Directive 命名
 
 **覆盖率**: 8/8 (100%)
 
@@ -814,7 +852,7 @@
 | 21 | 字符与编码 | 10/10 | 0 | 100% |
 | 22 | HTML 生成器 | 12/12 | 0 | 100% |
 | 23 | 语法验证/Linting | 19/19 | 0 | 100% |
-| 24 | 短代码（Shortcodes） | 8/8 | 0 | 100% |
+| 24 | 指令（Directives） | 8/8 | 0 | 100% |
 | | **总计** | **410/410** | **0** | **100%** |
 
 ---
@@ -914,7 +952,7 @@ val html = HtmlRenderer.renderMarkdown(input, flavour = CommonMarkFlavour)
 
 ### 三、解析器能力增强
 
-> **备注**: 自定义语法规则/短代码、多规范兼容（MarkdownExtra flavour）、代码块增强已实现，详见第 24 章「短代码」、第 3 章「代码块」和 Flavour System 章节。
+> **备注**: 自定义语法规则/指令、多规范兼容（MarkdownExtra flavour）、代码块增强已实现，详见第 24 章「指令」、第 3 章「代码块」和 Flavour System 章节。
 
 | 优先级 | 特性 | 说明 |
 |--------|------|------|

@@ -18,7 +18,7 @@ import com.hrm.markdown.parser.block.starters.*
  * - custom containers (`::: type ... :::`)
  * - math blocks (`$$ ... $$`) or inline math (`$...$`)
  * - emoji shortcodes (`:smile:`)
- * - shortcodes (`{% tag %}`)
+ * - directives (`{% tag %}`)
  * - front matter
  * - page breaks
  * - admonitions
@@ -55,7 +55,7 @@ object MarkdownExtraFlavour : MarkdownFlavour {
      * - definition descriptions (520)
      *
      * does not include: FrontMatter, CustomContainer, MathBlock,
-     * PageBreak, ShortcodeBlock.
+     * PageBreak, DirectiveBlock.
      */
     override val blockStarters: List<BlockStarter> = listOf(
         SetextHeadingStarter(),        // 100

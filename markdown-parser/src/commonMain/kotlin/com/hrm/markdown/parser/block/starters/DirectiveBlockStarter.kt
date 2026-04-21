@@ -1,18 +1,18 @@
 package com.hrm.markdown.parser.block.starters
 
 import com.hrm.markdown.parser.LineRange
-import com.hrm.markdown.parser.ast.ShortcodeBlock
+import com.hrm.markdown.parser.ast.DirectiveBlock
 import com.hrm.markdown.parser.block.OpenBlock
 import com.hrm.markdown.parser.core.LineCursor
 
 /**
- * block-level shortcode starter: `{% tag arg1 "arg2" key=value %}`.
+ * block-level directive starter: `{% tag arg1 "arg2" key=value %}`.
  *
  * detects lines starting with `{%` and ending with `%}`.
- * block shortcodes use `{% tag %}...{% endtag %}` syntax.
- * self-closing shortcodes on a line by themselves are also block-level.
+ * block directives use `{% tag %}...{% endtag %}` syntax.
+ * self-closing directives on a line by themselves are also block-level.
  */
-internal class ShortcodeBlockStarter : BlockStarter {
+internal class DirectiveBlockStarter : BlockStarter {
     override val priority: Int = 250
     override val canInterruptParagraph: Boolean = true
 
@@ -35,9 +35,9 @@ internal class ShortcodeBlockStarter : BlockStarter {
 
         cursor.advance(cursor.remaining)
 
-        val (tagName, args) = parseShortcodeArgs(inner)
+        val (tagName, args) = parseDirectiveArgs(inner)
 
-        val block = ShortcodeBlock(
+        val block = DirectiveBlock(
             tagName = tagName,
             args = args,
         )
@@ -56,11 +56,11 @@ internal class ShortcodeBlockStarter : BlockStarter {
         private val KV_REGEX = Regex("""([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([\w-]+))""")
 
         /**
-         * parses shortcode arguments from the content between {% and %}.
+         * parses directive arguments from the content between {% and %}.
          * supports positional args, quoted args, and key=value pairs.
          * positional args are stored with keys "_0", "_1", etc.
          */
-        fun parseShortcodeArgs(inner: String): Pair<String, Map<String, String>> {
+        fun parseDirectiveArgs(inner: String): Pair<String, Map<String, String>> {
             val tokens = tokenize(inner)
             if (tokens.isEmpty()) return "" to emptyMap()
 
@@ -86,7 +86,7 @@ internal class ShortcodeBlockStarter : BlockStarter {
         }
 
         /**
-         * tokenizes shortcode arguments, handling quoted strings.
+         * tokenizes directive arguments, handling quoted strings.
          */
         private fun tokenize(input: String): List<String> {
             val tokens = mutableListOf<String>()

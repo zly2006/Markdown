@@ -33,6 +33,7 @@ plugins {
 }
 
 include(":markdown-parser")
+include(":markdown-runtime")
 include(":markdown-renderer")
 include(":markdown-preview")
 include(":markdown-benchmark")

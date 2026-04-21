@@ -11,8 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import com.hrm.markdown.parser.ast.*
+import com.hrm.markdown.renderer.MarkdownBlockChildren
+import com.hrm.markdown.renderer.LocalMarkdownDirectiveRegistry
 import com.hrm.markdown.renderer.LocalMarkdownTheme
 import com.hrm.markdown.renderer.LocalRendererDocument
+import com.hrm.markdown.runtime.DirectiveBlockRenderScope
 
 private fun List<IntRange>.flattenLineNumbers(): Set<Int> = buildSet {
     for (range in this@flattenLineNumbers) {
@@ -30,6 +33,7 @@ internal fun BlockRenderer(
     renderRevision: Long = 0L,
     modifier: Modifier = Modifier,
 ) {
+    val directiveRegistry = LocalMarkdownDirectiveRegistry.current
     when (node) {
         is Heading -> HeadingRenderer(node, modifier)
         is SetextHeading -> SetextHeadingRenderer(node, modifier)
@@ -65,7 +69,23 @@ internal fun BlockRenderer(
         is FootnoteDefinition -> FootnoteDefinitionRenderer(node, modifier)
         is TocPlaceholder -> TocPlaceholderRenderer(node, modifier)
         is PageBreak -> PageBreakRenderer(modifier)
-        is ShortcodeBlock -> ShortcodeBlockRenderer(node, modifier)
+        is DirectiveBlock -> {
+            val renderer = directiveRegistry.findBlockDirectiveRenderer(node.tagName)
+            if (renderer != null) {
+                renderer(
+                    DirectiveBlockRenderScope(
+                        tagName = node.tagName,
+                        args = node.args,
+                        node = node,
+                        content = if (node.children.isNotEmpty()) {
+                            { MarkdownBlockChildren(parent = node) }
+                        } else null,
+                    )
+                )
+            } else {
+                DirectiveBlockRenderer(node, modifier)
+            }
+        }
         is TabBlock -> TabBlockRenderer(node, modifier)
         is BibliographyDefinition -> BibliographyDefinitionRenderer(node, modifier)
         is Figure -> FigureRenderer(node, modifier)

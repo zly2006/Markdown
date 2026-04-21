@@ -434,18 +434,22 @@ class PageBreak : LeafNode() {
 }
 
 /**
- * block-level shortcode: `{% tag arg1 "arg2" key=value %}...{% endtag %}`.
+ * block-level directive: `{% tag arg1 "arg2" key=value %}...{% endtag %}`.
  *
- * self-closing shortcodes (no end tag) are also represented as a block
+ * self-closing directives (no end tag) are also represented as a block
  * with empty children.
+ *
+ * 该节点也是官方块级扩展承载协议：
+ * parser 只负责把 directive 解析为纯 AST，
+ * 外部特殊语法应在 runtime 层先转换为 directive，再由 renderer 插件分发。
  */
-class ShortcodeBlock(
-    /** shortcode tag name, e.g. "youtube", "include" */
+class DirectiveBlock(
+    /** directive tag name, e.g. "youtube", "include" */
     var tagName: String = "",
     /** positional and keyword arguments */
     var args: Map<String, String> = emptyMap(),
 ) : ContainerNode() {
-    override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitShortcodeBlock(this)
+    override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitDirectiveBlock(this)
 }
 
 /**

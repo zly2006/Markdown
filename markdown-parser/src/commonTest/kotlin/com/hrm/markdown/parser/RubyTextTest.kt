@@ -107,12 +107,11 @@ class RubyTextTest {
     }
 
     @Test
-    fun should_not_conflict_with_shortcode_syntax() {
-        // {% shortcode %} should not be parsed as ruby
+    fun should_not_conflict_with_directive_syntax() {
+        // {% directive %} should not be parsed as ruby
         val doc = parser.parse("{% tag args %}")
-        val para = doc.children.first()
-        assertIs<Paragraph>(para)
-        assertTrue(para.children.none { it is RubyText })
+        val node = doc.children.first()
+        assertIs<DirectiveBlock>(node)
     }
 
     @Test

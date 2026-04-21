@@ -51,6 +51,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(projects.markdownRenderer)
+            implementation(projects.markdownRuntime)
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)

@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import com.hrm.codehigh.theme.CodeTheme
 import com.hrm.markdown.parser.ast.Document
+import com.hrm.markdown.runtime.MarkdownDirectiveRegistry
 
 /**
  * 链接点击回调，通过 [compositionLocalOf] 在组件树中传递。
@@ -37,6 +38,7 @@ internal val LocalFootnoteNavigationState = compositionLocalOf<FootnoteNavigatio
 
 internal val LocalCodeHighlightTheme = compositionLocalOf<CodeTheme?> { null }
 internal val LocalIsStreaming = compositionLocalOf { false }
+internal val LocalMarkdownDirectiveRegistry = compositionLocalOf { MarkdownDirectiveRegistry.Empty }
 
 @Composable
 internal fun ProvideRendererContext(
@@ -49,6 +51,7 @@ internal fun ProvideRendererContext(
     config: MarkdownConfig = MarkdownConfig.Default,
     codeTheme: CodeTheme? = null,
     isStreaming: Boolean = false,
+    directiveRegistry: MarkdownDirectiveRegistry = MarkdownDirectiveRegistry.Empty,
     content: @Composable () -> Unit,
 ) {
     // 用 rememberUpdatedState 包装 onLinkClick：
@@ -79,6 +82,7 @@ internal fun ProvideRendererContext(
         LocalFootnoteNavigationState provides footnoteNavigationState,
         LocalCodeHighlightTheme provides codeTheme,
         LocalIsStreaming provides isStreaming,
+        LocalMarkdownDirectiveRegistry provides directiveRegistry,
     ) {
         content()
     }

@@ -18,20 +18,23 @@ internal class BibliographyProcessor : PostProcessor {
         collectBibliographyDefs(document, bibDefs)
 
         for (footnote in bibDefs) {
+            val parent = footnote.parent as? ContainerNode ?: continue
+            val nodes = bibliographyNodes(parent, footnote)
             val bibDef = BibliographyDefinition()
             bibDef.lineRange = footnote.lineRange
             bibDef.sourceRange = footnote.sourceRange
 
-            // 解析脚注内容中的文献条目
+            // 解析脚注内容中的文献条目。
+            // bibliography 在当前语法中允许紧随脚注之后的连续段落继续追加条目。
             // 格式：key: Author, "Title", Year
-            val entries = parseBibEntries(footnote)
+            val entries = parseBibEntries(nodes)
             for (entry in entries) {
                 bibDef.entries[entry.key] = entry
             }
 
             // 替换原脚注节点
-            val parent = footnote.parent as? ContainerNode ?: continue
             parent.replaceChild(footnote, bibDef)
+            removeContinuationParagraphs(parent, nodes)
 
             // 从 footnoteDefinitions 中移除
             document.footnoteDefinitions.remove("bibliography")
@@ -49,30 +52,53 @@ internal class BibliographyProcessor : PostProcessor {
         }
     }
 
-    private fun parseBibEntries(footnote: FootnoteDefinition): List<BibEntry> {
+    private fun parseBibEntries(nodes: List<Node>): List<BibEntry> {
         val entries = mutableListOf<BibEntry>()
 
-        // 收集脚注子节点中的文本内容
-        for (child in footnote.children) {
-            if (child is Paragraph) {
-                val text = extractPlainText(child)
-                // 逐行解析 key: content 格式
-                for (line in text.lines()) {
-                    val trimmed = line.trim()
-                    if (trimmed.isEmpty()) continue
-                    val colonIdx = trimmed.indexOf(':')
-                    if (colonIdx > 0) {
-                        val key = trimmed.substring(0, colonIdx).trim()
-                        val content = trimmed.substring(colonIdx + 1).trim()
-                        if (key.isNotEmpty() && content.isNotEmpty()) {
-                            entries.add(BibEntry(key = key, content = content))
-                        }
+        // 收集脚注子节点和紧随其后的连续段落文本。
+        for (child in nodes) {
+            if (child is BlankLine) continue
+            val text = extractPlainText(child)
+            // 逐行解析 key: content 格式
+            for (line in text.lines()) {
+                val trimmed = line.trim()
+                if (trimmed.isEmpty()) continue
+                val colonIdx = trimmed.indexOf(':')
+                if (colonIdx > 0) {
+                    val key = trimmed.substring(0, colonIdx).trim()
+                    val content = trimmed.substring(colonIdx + 1).trim()
+                    if (key.isNotEmpty() && content.isNotEmpty()) {
+                        entries.add(BibEntry(key = key, content = content))
                     }
                 }
             }
         }
 
         return entries
+    }
+
+    private fun removeContinuationParagraphs(parent: ContainerNode, nodes: List<Node>) {
+        nodes
+            .drop(1)
+            .filterIsInstance<Paragraph>()
+            .forEach { parent.removeChild(it) }
+    }
+
+    private fun bibliographyNodes(parent: ContainerNode, footnote: FootnoteDefinition): List<Node> {
+        val siblings = parent.children
+        val footnoteIndex = siblings.indexOf(footnote)
+        if (footnoteIndex == -1) return listOf(footnote)
+
+        val nodes = mutableListOf<Node>(footnote)
+        var previousEndLine = footnote.lineRange.endLine
+        for (i in footnoteIndex + 1 until siblings.size) {
+            val sibling = siblings[i]
+            if (sibling !is Paragraph) break
+            if (sibling.lineRange.startLine > previousEndLine + 1) break
+            nodes += sibling
+            previousEndLine = sibling.lineRange.endLine
+        }
+        return nodes
     }
 
     private fun extractPlainText(node: Node): String = when (node) {

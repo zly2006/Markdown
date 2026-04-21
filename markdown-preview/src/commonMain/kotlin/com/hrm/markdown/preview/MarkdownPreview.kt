@@ -135,11 +135,18 @@ val previewCategories: List<PreviewCategory> = listOf(
         groups = extendedPreviewGroups
     ),
     PreviewCategory(
-        id = "shortcodes",
-        title = "短代码",
-        description = "块级/行内短代码：{% tag args %}...{% endtag %}",
+        id = "directives",
+        title = "指令",
+        description = "块级/行内指令：{% tag args %}...{% endtag %}",
         icon = "🔧",
-        groups = shortcodePreviewGroups
+        groups = directivePreviewGroups
+    ),
+    PreviewCategory(
+        id = "plugins",
+        title = "插件扩展",
+        description = "外部特殊语法转换 + directive 原生渲染",
+        icon = "🔌",
+        groups = directivePluginPreviewGroups
     ),
     PreviewCategory(
         id = "diagram",

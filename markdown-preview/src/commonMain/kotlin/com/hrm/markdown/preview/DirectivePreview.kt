@@ -2,15 +2,15 @@ package com.hrm.markdown.preview
 
 import com.hrm.markdown.renderer.Markdown
 
-internal val shortcodePreviewGroups = listOf(
+internal val directivePreviewGroups = listOf(
     PreviewGroup(
-        id = "block_shortcode",
-        title = "块级短代码",
-        description = "{% tag args %}...{% endtag %} 块级短代码语法",
+        id = "block_directive",
+        title = "块级指令",
+        description = "{% tag args %}...{% endtag %} 块级指令语法",
         items = listOf(
             PreviewItem(
-                id = "self_closing_shortcode",
-                title = "自闭合短代码",
+                id = "self_closing_directive",
+                title = "自闭合指令",
                 content = {
                     Markdown(
                         markdown = """
@@ -22,8 +22,8 @@ internal val shortcodePreviewGroups = listOf(
                 }
             ),
             PreviewItem(
-                id = "shortcode_with_content",
-                title = "包含内容的短代码",
+                id = "directive_with_content",
+                title = "包含内容的指令",
                 content = {
                     Markdown(
                         markdown = """
@@ -42,7 +42,7 @@ Important stuff here.
                 }
             ),
             PreviewItem(
-                id = "shortcode_args",
+                id = "directive_args",
                 title = "参数解析",
                 content = {
                     Markdown(
@@ -65,13 +65,13 @@ Important stuff here.
         )
     ),
     PreviewGroup(
-        id = "inline_shortcode",
-        title = "行内短代码",
-        description = "段落内嵌入的 {% tag args %} 行内短代码",
+        id = "inline_directive",
+        title = "行内指令",
+        description = "段落内嵌入的 {% tag args %} 行内指令",
         items = listOf(
             PreviewItem(
-                id = "inline_shortcode_basic",
-                title = "行内短代码",
+                id = "inline_directive_basic",
+                title = "行内指令",
                 content = {
                     Markdown(
                         markdown = """

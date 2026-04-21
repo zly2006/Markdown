@@ -93,7 +93,7 @@ class InlineParser(
         internal val KBD_REGEX = Regex("""<kbd>(.*?)</kbd>""", RegexOption.IGNORE_CASE)
 
         /**
-         * 标准 Emoji 短代码到 Unicode 的映射表（常用子集）。
+         * 标准 Emoji 指令到 Unicode 的映射表（常用子集）。
          */
         val STANDARD_EMOJI_MAP: Map<String, String> = mapOf(
             "smile" to "😄", "laughing" to "😆", "blush" to "😊", "smiley" to "😃",
@@ -276,7 +276,7 @@ private class InlineParserInstance(
                 c == '^' && enableExtendedInline -> appendPairedDelim('^', 1)
                 c == '$' && enableExtendedInline -> appendDollar()
                 c == ':' && enableExtendedInline -> appendPossibleEmoji()
-                c == '{' && scanner.peek(1) == '%' && enableExtendedInline -> appendShortcode()
+                c == '{' && scanner.peek(1) == '%' && enableExtendedInline -> appendDirective()
                 c == '>' && scanner.peek(1) == '!' && enableExtendedInline -> appendSpoiler()
                 c == '{' && enableExtendedInline && scanner.peek(1) != '%' -> appendPossibleRuby()
                 c == '\n' -> appendLineBreak()
@@ -820,12 +820,12 @@ private class InlineParserInstance(
         appendLL(Text("$"))
     }
 
-    private fun appendShortcode() {
+    private fun appendDirective() {
         val pos = scanner.pos
         // find the closing %}
         val closeIdx = input.indexOf("%}", pos + 2)
         if (closeIdx < 0) {
-            // not a valid shortcode, emit as text
+            // not a valid directive, emit as text
             scanner.advance() // {
             appendLL(Text("{"))
             return
@@ -838,8 +838,8 @@ private class InlineParserInstance(
         }
         // advance past the closing %}
         scanner.pos = closeIdx + 2
-        val (tagName, args) = com.hrm.markdown.parser.block.starters.ShortcodeBlockStarter.parseShortcodeArgs(inner)
-        appendLL(ShortcodeInline(tagName = tagName, args = args))
+        val (tagName, args) = com.hrm.markdown.parser.block.starters.DirectiveBlockStarter.parseDirectiveArgs(inner)
+        appendLL(DirectiveInline(tagName = tagName, args = args))
     }
 
     private fun appendPossibleEmoji() {

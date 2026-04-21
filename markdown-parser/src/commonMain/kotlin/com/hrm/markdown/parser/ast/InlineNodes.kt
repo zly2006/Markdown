@@ -202,10 +202,10 @@ class InsertedText : ContainerNode() {
 }
 
 /**
- * Emoji 短代码：`:smile:`。
+ * Emoji 指令：`:smile:`。
  *
  * 支持增强功能：
- * - 标准短代码映射到 Unicode：`:smile:` → 😄
+ * - 标准指令映射到 Unicode：`:smile:` → 😄
  * - 自定义别名映射：`:my-emoji:` → 用户定义的字符
  * - ASCII 表情自动转换：`:)` → 😊（由解析器在扫描阶段处理）
  */
@@ -265,18 +265,18 @@ class KeyboardInput(
 }
 
 /**
- * inline shortcode: `{% tag arg1 "arg2" key=value %}`.
+ * inline directive: `{% tag arg1 "arg2" key=value %}`.
  *
- * inline shortcodes cannot have content (no end tag) and are leaf nodes.
+ * inline directives cannot have content (no end tag) and are leaf nodes.
  */
-class ShortcodeInline(
-    /** shortcode tag name */
+class DirectiveInline(
+    /** directive tag name */
     var tagName: String = "",
     /** positional and keyword arguments */
     var args: Map<String, String> = emptyMap(),
 ) : LeafNode() {
     override val literal: String get() = tagName
-    override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitShortcodeInline(this)
+    override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitDirectiveInline(this)
 }
 
 /**

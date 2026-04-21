@@ -136,7 +136,7 @@ class BlockParser(
                 // 检查块是否被关闭围栏/定界符关闭
                 // （围栏代码块、数学块或前置元数据）
                 if (ob.node is FencedCodeBlock || ob.node is MathBlock || ob.node is CustomContainer
-                    || ob.node is ShortcodeBlock
+                    || ob.node is DirectiveBlock
                     || (ob.node is HtmlBlock && ob.htmlType in 1..5)) {
                     closedByFenceOrMath = true
                 }
@@ -586,7 +586,7 @@ class BlockParser(
                 cursor.restore(snap)
                 true
             }
-            is ShortcodeBlock -> {
+            is DirectiveBlock -> {
                 // check for closing end tag: {% endtag %}
                 val snap = cursor.snapshot()
                 cursor.advanceSpaces(3)
@@ -800,7 +800,7 @@ class BlockParser(
             }
             is ListBlock, is ListItem, is BlockQuote, is Document,
             is DefinitionList, is DefinitionDescription, is FootnoteDefinition, is CustomContainer,
-            is ShortcodeBlock, is TabBlock, is TabItem -> {
+            is DirectiveBlock, is TabBlock, is TabItem -> {
                 // 容器块：创建新段落或处理懒延续
                 handleContainerLine(tip, cursor, lineIdx)
             }
@@ -910,8 +910,8 @@ class BlockParser(
             is TabItem -> {
                 tip.blankLineCount++
             }
-            is ShortcodeBlock -> {
-                // blank lines do not close shortcode blocks, only {% endtag %} does
+            is DirectiveBlock -> {
+                // blank lines do not close directive blocks, only {% endtag %} does
             }
             else -> {
                 // 其他块：空行
@@ -1064,7 +1064,7 @@ class BlockParser(
             is CustomContainer -> {
                 node.lineRange = LineRange(ob.contentStartLine, ob.lastLineIndex + 1)
             }
-            is ShortcodeBlock -> {
+            is DirectiveBlock -> {
                 node.lineRange = LineRange(ob.contentStartLine, ob.lastLineIndex + 1)
             }
             is TabBlock -> {

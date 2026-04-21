@@ -85,10 +85,10 @@ class CodeBlockEnhancementTest {
     }
 
     @Test
-    fun should_default_linenums_to_false() {
+    fun should_default_linenums_to_true() {
         val doc = parse("```python\ncode\n```")
         val codeBlock = doc.children.filterIsInstance<FencedCodeBlock>().first()
-        assertFalse(codeBlock.showLineNumbers)
+        assertTrue(codeBlock.showLineNumbers)
     }
 
     // ---- start line number ----
@@ -143,7 +143,7 @@ class CodeBlockEnhancementTest {
     fun should_not_render_default_attributes() {
         val html = renderHtml("```python\ncode\n```")
         assertFalse(html.contains("data-hl-lines"), "should not have data-hl-lines when not set")
-        assertFalse(html.contains("data-linenums"), "should not have data-linenums when false")
+        assertTrue(html.contains("data-linenums=\"true\""), "should have data-linenums when line numbers default to true")
         assertFalse(html.contains("data-startline"), "should not have data-startline when 1")
     }
 

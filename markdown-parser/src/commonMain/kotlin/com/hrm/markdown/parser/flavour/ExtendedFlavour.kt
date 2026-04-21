@@ -104,7 +104,7 @@ object ExtendedFlavour : MarkdownFlavour {
         TableStarter(),                // 200
         PageBreakStarter(),            // 205
         ThematicBreakStarter(),        // 210
-        ShortcodeBlockStarter(),       // 250
+        DirectiveBlockStarter(),       // 250
         TabBlockStarter(),             // 295
         CustomContainerStarter(),      // 300
         FencedCodeBlockStarter(),      // 310

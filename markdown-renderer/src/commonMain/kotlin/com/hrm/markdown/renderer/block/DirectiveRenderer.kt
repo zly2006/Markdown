@@ -14,18 +14,18 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.hrm.markdown.parser.ast.ShortcodeBlock
+import com.hrm.markdown.parser.ast.DirectiveBlock
 import com.hrm.markdown.renderer.LocalMarkdownTheme
 import com.hrm.markdown.renderer.MarkdownBlockChildren
 
 /**
- * 块级短代码渲染器：`{% tag args %}...{% endtag %}`。
+ * 块级指令渲染器：`{% tag args %}...{% endtag %}`。
  *
- * 显示短代码标签名和参数，如果有子内容则渲染子块。
+ * 显示指令标签名和参数，如果有子内容则渲染子块。
  */
 @Composable
-internal fun ShortcodeBlockRenderer(
-    node: ShortcodeBlock,
+internal fun DirectiveBlockRenderer(
+    node: DirectiveBlock,
     modifier: Modifier = Modifier,
 ) {
     val theme = LocalMarkdownTheme.current
