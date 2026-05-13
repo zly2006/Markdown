@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -34,71 +35,80 @@ internal fun BlockRenderer(
     modifier: Modifier = Modifier,
 ) {
     val directiveRegistry = LocalMarkdownDirectiveRegistry.current
-    when (node) {
-        is Heading -> HeadingRenderer(node, modifier)
-        is SetextHeading -> SetextHeadingRenderer(node, modifier)
-        is Paragraph -> ParagraphRenderer(node, modifier)
-        is ThematicBreak -> ThematicBreakRenderer(modifier)
-        is FencedCodeBlock -> key(renderRevision) {
-            FencedCodeBlockRenderer(
-                text = node.literal,
-                language = node.language,
-                title = node.attributes.pairs["title"],
-                showLineNumbers = node.showLineNumbers,
-                startLine = node.startLineNumber,
-                highlightedLines = node.highlightLines.flattenLineNumbers(),
-                modifier = modifier,
-            )
-        }
-        is IndentedCodeBlock -> key(renderRevision) {
-            IndentedCodeBlockRenderer(
-                text = node.literal,
-                modifier = modifier,
-            )
-        }
-        is BlockQuote -> BlockQuoteRenderer(node, modifier)
-        is ListBlock -> ListBlockRenderer(node, modifier)
-        is HtmlBlock -> HtmlBlockRenderer(node, modifier)
-        is Table -> TableRenderer(node, modifier)
-        is MathBlock -> MathBlockRenderer(node, modifier)
-        is Admonition -> AdmonitionRenderer(node, modifier)
-        is CustomContainer -> CustomContainerRenderer(node, modifier)
-        is DiagramBlock -> DiagramBlockRenderer(node, modifier)
-        is ColumnsLayout -> ColumnsLayoutRenderer(node, modifier)
-        is DefinitionList -> DefinitionListRenderer(node, modifier)
-        is FootnoteDefinition -> FootnoteDefinitionRenderer(node, modifier)
-        is TocPlaceholder -> TocPlaceholderRenderer(node, modifier)
-        is PageBreak -> PageBreakRenderer(modifier)
-        is DirectiveBlock -> {
-            val renderer = directiveRegistry.findBlockDirectiveRenderer(node.tagName)
-            if (renderer != null) {
-                renderer(
-                    DirectiveBlockRenderScope(
-                        tagName = node.tagName,
-                        args = node.args,
-                        node = node,
-                        content = if (node.children.isNotEmpty()) {
-                            { MarkdownBlockChildren(parent = node) }
-                        } else null,
-                    )
+    if (node is MathBlock) {
+        MathBlockRenderer(
+            latex = node.literal,
+            modifier = modifier,
+        )
+        return
+    }
+
+    key(renderRevision) {
+        when (node) {
+            is Heading -> HeadingRenderer(node, modifier)
+            is SetextHeading -> SetextHeadingRenderer(node, modifier)
+            is Paragraph -> ParagraphRenderer(node, modifier)
+            is ThematicBreak -> ThematicBreakRenderer(modifier)
+            is FencedCodeBlock -> {
+                FencedCodeBlockRenderer(
+                    text = node.literal,
+                    language = node.language,
+                    title = node.attributes.pairs["title"],
+                    showLineNumbers = node.showLineNumbers,
+                    startLine = node.startLineNumber,
+                    highlightedLines = node.highlightLines.flattenLineNumbers(),
+                    modifier = modifier,
                 )
-            } else {
-                DirectiveBlockRenderer(node, modifier)
             }
-        }
-        is TabBlock -> TabBlockRenderer(node, modifier)
-        is BibliographyDefinition -> BibliographyDefinitionRenderer(node, modifier)
-        is Figure -> FigureRenderer(node, modifier)
-        is NativeBlock -> node.content()
-        is FrontMatter -> { /* FrontMatter 通常不渲染 */ }
-        is LinkReferenceDefinition -> { /* 引用定义不直接渲染 */ }
-        is AbbreviationDefinition -> { /* 缩写定义不直接渲染 */ }
-        is BlankLine -> { /* 空行不渲染 */ }
-        else -> {
-            // 未知块级节点，尝试渲染子节点
-            if (node is ContainerNode) {
-                for (child in node.children) {
-                    BlockRenderer(child)
+            is IndentedCodeBlock -> {
+                IndentedCodeBlockRenderer(
+                    text = node.literal,
+                    modifier = modifier,
+                )
+            }
+            is BlockQuote -> BlockQuoteRenderer(node, modifier)
+            is ListBlock -> ListBlockRenderer(node, modifier)
+            is HtmlBlock -> HtmlBlockRenderer(node, modifier)
+            is Table -> TableRenderer(node, modifier)
+            is Admonition -> AdmonitionRenderer(node, modifier)
+            is CustomContainer -> CustomContainerRenderer(node, modifier)
+            is DiagramBlock -> DiagramBlockRenderer(node, modifier)
+            is ColumnsLayout -> ColumnsLayoutRenderer(node, modifier)
+            is DefinitionList -> DefinitionListRenderer(node, modifier)
+            is FootnoteDefinition -> FootnoteDefinitionRenderer(node, modifier)
+            is TocPlaceholder -> TocPlaceholderRenderer(node, modifier)
+            is PageBreak -> PageBreakRenderer(modifier)
+            is DirectiveBlock -> {
+                val renderer = directiveRegistry.findBlockDirectiveRenderer(node.tagName)
+                if (renderer != null) {
+                    renderer(
+                        DirectiveBlockRenderScope(
+                            tagName = node.tagName,
+                            args = node.args,
+                            node = node,
+                            content = if (node.children.isNotEmpty()) {
+                                { MarkdownBlockChildren(parent = node) }
+                            } else null,
+                        )
+                    )
+                } else {
+                    DirectiveBlockRenderer(node, modifier)
+                }
+            }
+            is TabBlock -> TabBlockRenderer(node, modifier)
+            is BibliographyDefinition -> BibliographyDefinitionRenderer(node, modifier)
+            is Figure -> FigureRenderer(node, modifier)
+            is NativeBlock -> node.content()
+            is FrontMatter -> { /* FrontMatter 通常不渲染 */ }
+            is LinkReferenceDefinition -> { /* 引用定义不直接渲染 */ }
+            is AbbreviationDefinition -> { /* 缩写定义不直接渲染 */ }
+            is BlankLine -> { /* 空行不渲染 */ }
+            else -> {
+                // 未知块级节点，尝试渲染子节点
+                if (node is ContainerNode) {
+                    for (child in node.children) {
+                        BlockRenderer(child)
+                    }
                 }
             }
         }
@@ -133,20 +143,40 @@ internal fun blockRenderRevision(node: Node): Long = when (node) {
         node.contentHash,
         node.literal.length.toLong(),
     )
+    is MathBlock -> revisionHash(
+        node.lineRange.endLine.toLong(),
+        node.literal.hashCode().toLong(),
+        node.literal.length.toLong(),
+    )
     is BlockQuote -> revisionHash(
         node.lineRange.endLine.toLong(),
         node.contentHash,
         node.childCount().toLong(),
+        childRenderRevision(node),
+    )
+    is ListItem -> revisionHash(
+        node.lineRange.endLine.toLong(),
+        node.contentHash,
+        node.childCount().toLong(),
+        childRenderRevision(node),
     )
     is ListBlock -> revisionHash(
         node.lineRange.endLine.toLong(),
         node.contentHash,
         node.childCount().toLong(),
+        childRenderRevision(node),
     )
     is Table -> revisionHash(
         node.lineRange.endLine.toLong(),
         node.contentHash,
         node.childCount().toLong(),
+        childRenderRevision(node),
+    )
+    is CustomContainer -> revisionHash(
+        node.lineRange.endLine.toLong(),
+        node.contentHash,
+        node.childCount().toLong(),
+        childRenderRevision(node),
     )
     else -> revisionHash(node.lineRange.endLine.toLong(), node.contentHash)
 }
@@ -159,6 +189,14 @@ private fun revisionHash(a: Long, b: Long, c: Long): Long =
 
 private fun revisionHash(a: Long, b: Long, c: Long, d: Long): Long =
     mixRevision(revisionHash(a, b, c), d)
+
+private fun childRenderRevision(node: ContainerNode): Long {
+    var acc = REVISION_OFFSET_BASIS
+    for (child in node.children) {
+        acc = mixRevision(acc, blockRenderRevision(child))
+    }
+    return acc
+}
 
 private fun mixRevision(acc: Long, value: Long): Long = (acc xor value) * REVISION_FNV_PRIME
 
@@ -181,25 +219,15 @@ internal fun TocPlaceholderRenderer(
     val theme = LocalMarkdownTheme.current
     val document = LocalRendererDocument.current
 
-    // 收集所有标题
-    var headings = collectHeadings(document)
-    if (headings.isEmpty()) return
-
-    // 按深度范围过滤
-    headings = headings.filter { it.level in node.minDepth..node.maxDepth }
-
-    // 按排除 ID 过滤
-    if (node.excludeIds.isNotEmpty()) {
-        headings = headings.filter { heading ->
-            heading.id == null || heading.id !in node.excludeIds
+    // 收集 + 过滤 + 排序结果，避免每次重组都全量遍历 AST
+    val headings = remember(document, node.minDepth, node.maxDepth, node.excludeIds, node.order) {
+        var list = collectHeadings(document).filter { it.level in node.minDepth..node.maxDepth }
+        if (node.excludeIds.isNotEmpty()) {
+            list = list.filter { it.id == null || it.id !in node.excludeIds }
         }
+        if (node.order == "desc") list = list.reversed()
+        list
     }
-
-    // 按排序方式排序
-    if (node.order == "desc") {
-        headings = headings.reversed()
-    }
-
     if (headings.isEmpty()) return
 
     Column(

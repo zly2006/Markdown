@@ -9,7 +9,7 @@ plugins {
 kotlin {
     jvmToolchain(21)
 
-    androidLibrary {
+    android {
         namespace = "com.hrm.markdown.renderer"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -48,7 +48,7 @@ kotlin {
             implementation(libs.compose.components.resources)
 
             implementation(libs.bundles.latex)
-            implementation(libs.codehigh)
+            implementation(libs.bundles.codehigh)
 
             // 图片加载：Coil3 + Ktor3 网络引擎
             implementation(libs.coil.compose)

@@ -351,6 +351,12 @@ class BlockParser(
 
                 parent.appendChild(newBlock.node)
                 openBlocks.add(newBlock)
+                if (isSelfContainedBlock(newBlock)) {
+                    finalizeBlock(newBlock)
+                    openBlocks.removeAt(openBlocks.size - 1)
+                    appendTrailingParagraph(parent, newBlock, lineIdx)
+                    return
+                }
                 lastMatched = newBlock
                 blockStarted = true
             }
@@ -358,6 +364,20 @@ class BlockParser(
 
         // 第四阶段：将行添加到当前块
         addLineToTip(lastMatched, cursor, lineIdx)
+    }
+
+    private fun isSelfContainedBlock(block: OpenBlock): Boolean {
+        return block.node is MathBlock && block.node.literal.isNotEmpty()
+    }
+
+    private fun appendTrailingParagraph(parent: ContainerNode, block: OpenBlock, lineIdx: Int) {
+        val trailing = block.trailingContent?.trimStart()
+        if (trailing.isNullOrBlank()) return
+
+        val paragraph = Paragraph()
+        paragraph.rawContent = trailing
+        paragraph.lineRange = LineRange(lineIdx, lineIdx + 1)
+        parent.appendChild(paragraph)
     }
 
     /**
@@ -761,7 +781,9 @@ class BlockParser(
                 // ATX 标题内容已在解析时捕获
             }
             is MathBlock -> {
-                tip.contentLines.add(lineContent)
+                val content = if (lineIdx == tip.contentStartLine) lineContent.trimStart() else lineContent
+                if (lineIdx == tip.contentStartLine && content.isEmpty()) return
+                tip.contentLines.add(content)
             }
             is FrontMatter -> {
                 val trimmed = source.lineContent(lineIdx).trim()
@@ -1380,30 +1402,44 @@ class BlockParser(
                 if (node.rawContent != null) {
                     return node.rawContent!!
                 }
-                val lines = (lr.startLine until lr.endLine - 1).map {
-                    source.lineContent(it).trimStart().trimEnd()
+                buildString {
+                    for (i in lr.startLine until lr.endLine - 1) {
+                        if (i > lr.startLine) append('\n')
+                        append(source.lineContent(i).trimStart().trimEnd())
+                    }
                 }
-                lines.joinToString("\n")
             }
             is Paragraph -> {
                 // 优先使用解析阶段已捕获的内容（已去除块级标记如列表标记）
                 if (node.rawContent != null) {
                     return node.rawContent!!
                 }
-                val lines = (lr.startLine until lr.endLine).map { source.lineContent(it).trimStart() }
-                lines.joinToString("\n")
+                buildString {
+                    for (i in lr.startLine until lr.endLine) {
+                        if (i > lr.startLine) append('\n')
+                        append(source.lineContent(i).trimStart())
+                    }
+                }
             }
             is TableCell -> {
                 // 使用解析时存储的单元格内容，而非从源文本行读取
                 node.rawContent
             }
             is DefinitionTerm -> {
-                val lines = (lr.startLine until lr.endLine).map { source.lineContent(it).trimStart() }
-                lines.joinToString("\n")
+                buildString {
+                    for (i in lr.startLine until lr.endLine) {
+                        if (i > lr.startLine) append('\n')
+                        append(source.lineContent(i).trimStart())
+                    }
+                }
             }
             else -> {
-                val lines = (lr.startLine until lr.endLine).map { source.lineContent(it) }
-                lines.joinToString("\n")
+                buildString {
+                    for (i in lr.startLine until lr.endLine) {
+                        if (i > lr.startLine) append('\n')
+                        append(source.lineContent(i))
+                    }
+                }
             }
         }
     }
