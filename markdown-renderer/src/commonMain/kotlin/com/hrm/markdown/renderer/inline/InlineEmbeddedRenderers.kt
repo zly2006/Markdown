@@ -123,6 +123,7 @@ internal fun AnnotatedString.Builder.renderInlineMathNode(
         fontSize = fontSize.sp,
         color = theme.mathColor,
         darkColor = theme.mathColor,
+        mathFont = theme.mathFont,
     )
 
     val dims = latexMeasurer?.measure(node.literal, latexConfig)
