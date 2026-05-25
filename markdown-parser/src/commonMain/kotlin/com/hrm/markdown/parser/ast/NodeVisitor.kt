@@ -29,6 +29,7 @@ interface NodeVisitor<R> {
     fun visitDefinitionDescription(node: DefinitionDescription): R
     fun visitAdmonition(node: Admonition): R
     fun visitFrontMatter(node: FrontMatter): R
+    fun visitNativeBlock(node: NativeBlock): R
     fun visitBlankLine(node: BlankLine): R
     fun visitTocPlaceholder(node: TocPlaceholder): R
     fun visitAbbreviationDefinition(node: AbbreviationDefinition): R
@@ -104,6 +105,7 @@ abstract class DefaultNodeVisitor<R>(private val defaultValue: R) : NodeVisitor<
     override fun visitDefinitionDescription(node: DefinitionDescription): R = defaultValue
     override fun visitAdmonition(node: Admonition): R = defaultValue
     override fun visitFrontMatter(node: FrontMatter): R = defaultValue
+    override fun visitNativeBlock(node: NativeBlock): R = defaultValue
     override fun visitBlankLine(node: BlankLine): R = defaultValue
     override fun visitTocPlaceholder(node: TocPlaceholder): R = defaultValue
     override fun visitAbbreviationDefinition(node: AbbreviationDefinition): R = defaultValue

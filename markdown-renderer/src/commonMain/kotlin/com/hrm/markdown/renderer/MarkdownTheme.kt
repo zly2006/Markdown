@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hrm.latex.renderer.font.MathFont
 
 /**
  * Markdown 渲染的完整主题配置。
@@ -93,6 +94,8 @@ data class MarkdownTheme(
     val mathBlockBackground: Color = Color(0xFFF6F8FA),
     /** 数学公式文字颜色 */
     val mathColor: Color = Color(0xFF1F2328),
+    /** 数学公式字体配置。设置为 MathFont.Default 使用系统字体降级（需通过 CDN 下载字体） */
+    val mathFont: MathFont = MathFont.Default,
     /** Admonition 样式映射 */
     val admonitionStyles: Map<String, AdmonitionStyle> = defaultAdmonitionStyles(),
     /** 脚注文字样式 */

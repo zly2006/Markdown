@@ -1,7 +1,12 @@
 package com.hrm.markdown.parser.ast
 
+import androidx.compose.runtime.Composable
 import com.hrm.markdown.parser.core.Attributes
 import com.hrm.markdown.parser.lint.DiagnosticResult
+
+private var nextSyntheticStableKey = -1
+
+private fun allocateSyntheticStableKey(): Int = nextSyntheticStableKey--
 
 /**
  * 文档的根节点。
@@ -286,6 +291,21 @@ class FrontMatter(
     override var literal: String = ""
 ) : LeafNode() {
     override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitFrontMatter(this)
+}
+
+/**
+ * 原生 Compose 块。
+ *
+ * 该节点不由 Markdown 文本直接解析产生，而是用于外部手工构造 AST 时插入
+ * 自定义 Compose 内容。块级渲染时会直接执行 [content]。
+ */
+class NativeBlock(
+    val content: @Composable () -> Unit,
+) : LeafNode() {
+    override val literal: String get() = ""
+    override val stableKey: Int = allocateSyntheticStableKey()
+
+    override fun <R> accept(visitor: NodeVisitor<R>): R = visitor.visitNativeBlock(this)
 }
 
 /**

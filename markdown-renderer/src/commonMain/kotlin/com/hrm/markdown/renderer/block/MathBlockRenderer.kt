@@ -41,6 +41,7 @@ internal fun MathBlockRenderer(
         fontSize = (theme.mathFontSize * 1.2f).sp,
         color = theme.mathColor,
         darkColor = theme.mathColor,
+        mathFont = theme.mathFont,
     )
 
     // 使用 LatexMeasurer 精确测量公式高度，避免容器产生多余空白
