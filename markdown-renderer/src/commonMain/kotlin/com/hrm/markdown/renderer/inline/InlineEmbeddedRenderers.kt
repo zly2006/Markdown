@@ -16,6 +16,7 @@ import com.hrm.codehigh.renderer.measureInlineCodeSize
 import com.hrm.codehigh.theme.CodeTheme
 import com.hrm.latex.renderer.measure.LatexMeasurerState
 import com.hrm.latex.renderer.model.LatexConfig
+import com.hrm.latex.renderer.model.LatexTheme
 import com.hrm.markdown.parser.ast.DirectiveInline
 import com.hrm.markdown.parser.ast.Image
 import com.hrm.markdown.parser.ast.InlineCode
@@ -121,8 +122,7 @@ internal fun AnnotatedString.Builder.renderInlineMathNode(
     val fontSize = theme.mathFontSize
     val latexConfig = LatexConfig(
         fontSize = fontSize.sp,
-        color = theme.mathColor,
-        darkColor = theme.mathColor,
+        theme = LatexTheme.light(color = theme.mathColor),
         mathFont = theme.mathFont,
     )
 

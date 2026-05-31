@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.hrm.latex.renderer.Latex
 import com.hrm.latex.renderer.measure.rememberLatexMeasurer
 import com.hrm.latex.renderer.model.LatexConfig
+import com.hrm.latex.renderer.model.LatexTheme
 import com.hrm.markdown.renderer.LocalMarkdownTheme
 
 /**
@@ -35,12 +36,9 @@ internal fun MathBlockRenderer(
 ) {
     val theme = LocalMarkdownTheme.current
     val trimmedLatex = latex.trim()
-    // 将 color 和 darkColor 统一设为 mathColor，
-    // 避免 Latex 组件内部 isSystemInDarkTheme() 选错颜色导致文字与背景色对比度不足
     val config = LatexConfig(
         fontSize = (theme.mathFontSize * 1.2f).sp,
-        color = theme.mathColor,
-        darkColor = theme.mathColor,
+        theme = LatexTheme.light(color = theme.mathColor),
         mathFont = theme.mathFont,
     )
 
