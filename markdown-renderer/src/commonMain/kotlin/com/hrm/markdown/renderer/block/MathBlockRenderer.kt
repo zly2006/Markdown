@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.sp
 import com.hrm.latex.renderer.Latex
 import com.hrm.latex.renderer.measure.rememberLatexMeasurer
 import com.hrm.latex.renderer.model.LatexConfig
-import com.hrm.latex.renderer.model.LatexTheme
 import com.hrm.markdown.renderer.LocalMarkdownTheme
 
 /**
@@ -38,8 +37,8 @@ internal fun MathBlockRenderer(
     val trimmedLatex = latex.trim()
     val config = LatexConfig(
         fontSize = (theme.mathFontSize * 1.2f).sp,
-        theme = LatexTheme.light(color = theme.mathColor),
         mathFont = theme.mathFont,
+        theme = theme.latexTheme,
     )
 
     // 使用 LatexMeasurer 精确测量公式高度，避免容器产生多余空白

@@ -1,9 +1,10 @@
-package com.hrm.markdown.renderer.inline
+package com.hrm.markdown.renderer.internal.layout.inline
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import com.hrm.markdown.renderer.inline.InlinePlaceholderId
 
 internal data class InlineFlowLayout(
     val widthPx: Float,
@@ -34,16 +35,9 @@ internal sealed class LineItem {
     ) : LineItem()
 
     data class InlineItem(
-        val id: String,
+        val id: InlinePlaceholderId,
         override val widthPx: Float,
         override val heightPx: Float,
         val alternateText: String,
-        val content: @Composable () -> Unit,
     ) : LineItem()
-}
-
-internal sealed class Token {
-    data class Text(val annotated: AnnotatedString) : Token()
-    data class Inline(val id: String) : Token()
-    data object Newline : Token()
 }
