@@ -8,25 +8,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.Layout
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.HorizontalDivider
 import com.hrm.markdown.renderer.LocalMarkdownTheme
 import com.hrm.markdown.renderer.MarkdownRenderMode
-import com.hrm.markdown.renderer.block.RenderAdmonitionBlockModel
-import com.hrm.markdown.renderer.block.RenderBlockQuoteBlockModel
-import com.hrm.markdown.renderer.block.DiagramBlockRenderer
 import com.hrm.markdown.renderer.block.FencedCodeBlockRenderer
 import com.hrm.markdown.renderer.block.MathBlockRenderer
 import com.hrm.markdown.renderer.block.PageBreakRenderer
+import com.hrm.markdown.renderer.block.RenderAdmonitionBlockModel
 import com.hrm.markdown.renderer.block.RenderBibliographyBlockModel
 import com.hrm.markdown.renderer.block.RenderBibliographyLayoutBlockModel
+import com.hrm.markdown.renderer.block.RenderBlockQuoteBlockModel
 import com.hrm.markdown.renderer.block.RenderColumnsLayoutBlockModel
 import com.hrm.markdown.renderer.block.RenderColumnsLayoutGroupModel
 import com.hrm.markdown.renderer.block.RenderCustomContainerBlockModel
@@ -41,10 +38,10 @@ import com.hrm.markdown.renderer.block.RenderFootnoteLayoutBlockModel
 import com.hrm.markdown.renderer.block.RenderHtmlBlockModel
 import com.hrm.markdown.renderer.block.RenderListBlockModel
 import com.hrm.markdown.renderer.block.RenderListLayoutBlockModel
-import com.hrm.markdown.renderer.block.RenderTableLayoutBlockModel
-import com.hrm.markdown.renderer.block.RenderTableBlockModel
 import com.hrm.markdown.renderer.block.RenderTabBlockModel
 import com.hrm.markdown.renderer.block.RenderTabLayoutBlockModel
+import com.hrm.markdown.renderer.block.RenderTableBlockModel
+import com.hrm.markdown.renderer.block.RenderTableLayoutBlockModel
 import com.hrm.markdown.renderer.block.RenderTocLayoutBlockModel
 import com.hrm.markdown.renderer.block.ThematicBreakRenderer
 import com.hrm.markdown.renderer.internal.adapter.createDirectiveBlockRenderScope
@@ -60,8 +57,8 @@ import com.hrm.markdown.renderer.internal.core.model.DiagramBlockModel
 import com.hrm.markdown.renderer.internal.core.model.DiagramBlockWidgetModel
 import com.hrm.markdown.renderer.internal.core.model.DirectiveBlockModel
 import com.hrm.markdown.renderer.internal.core.model.FallbackContainerBlockModel
-import com.hrm.markdown.renderer.internal.core.model.FigureBlockModel
 import com.hrm.markdown.renderer.internal.core.model.FallbackLeafBlockModel
+import com.hrm.markdown.renderer.internal.core.model.FigureBlockModel
 import com.hrm.markdown.renderer.internal.core.model.FootnoteDefinitionBlockModel
 import com.hrm.markdown.renderer.internal.core.model.HeadingBlockModel
 import com.hrm.markdown.renderer.internal.core.model.HtmlBlockModel
@@ -76,26 +73,29 @@ import com.hrm.markdown.renderer.internal.core.model.TableBlockModel
 import com.hrm.markdown.renderer.internal.core.model.ThematicBreakBlockModel
 import com.hrm.markdown.renderer.internal.core.model.TocBlockModel
 import com.hrm.markdown.renderer.internal.layout.model.InternalLayoutDocumentModel
+import com.hrm.markdown.renderer.internal.layout.model.LayoutBibliographyBlockModel
 import com.hrm.markdown.renderer.internal.layout.model.LayoutColumnsBlockModel
 import com.hrm.markdown.renderer.internal.layout.model.LayoutDefinitionListBlockModel
-import com.hrm.markdown.renderer.internal.layout.model.LayoutBibliographyBlockModel
 import com.hrm.markdown.renderer.internal.layout.model.LayoutFigureBlockModel
 import com.hrm.markdown.renderer.internal.layout.model.LayoutFootnoteBlockModel
 import com.hrm.markdown.renderer.internal.layout.model.LayoutInlineBlockModel
+import com.hrm.markdown.renderer.internal.layout.model.LayoutListBlockModel
+import com.hrm.markdown.renderer.internal.layout.model.LayoutRect
+import com.hrm.markdown.renderer.internal.layout.model.LayoutRenderBlockModel
+import com.hrm.markdown.renderer.internal.layout.model.LayoutTabBlockModel
 import com.hrm.markdown.renderer.internal.layout.model.LayoutTableBlockModel
 import com.hrm.markdown.renderer.internal.layout.model.LayoutTocBlockModel
-import com.hrm.markdown.renderer.internal.layout.model.LayoutListBlockModel
-import com.hrm.markdown.renderer.internal.layout.model.LayoutRenderBlockModel
 import com.hrm.markdown.renderer.internal.layout.model.LayoutWidgetBlockModel
-import com.hrm.markdown.renderer.internal.layout.model.LayoutRect
-import com.hrm.markdown.renderer.internal.layout.model.LayoutTabBlockModel
+import com.hrm.markdown.renderer.internal.selection.LocalMarkdownSelectionController
+import com.hrm.markdown.renderer.internal.selection.selectableBlock
+
 internal object DefaultMarkdownComposePainter : MarkdownComposePainter {
     @Composable
     override fun Paint(
         document: InternalLayoutDocumentModel,
         environment: ComposeRenderEnvironment,
     ) {
-        val blocks = document.blocks.take(environment.visibleBlockCount)
+        val blocks = document.blocks
         when (environment.renderMode) {
             MarkdownRenderMode.LazyColumn -> {
                 LazyColumn(
@@ -118,7 +118,6 @@ internal object DefaultMarkdownComposePainter : MarkdownComposePainter {
                 }
             }
 
-            MarkdownRenderMode.SelectableColumn,
             MarkdownRenderMode.StaticColumn -> {
                 val body: @Composable () -> Unit = {
                     Column(
@@ -145,13 +144,7 @@ internal object DefaultMarkdownComposePainter : MarkdownComposePainter {
                     verticalArrangement = Arrangement.spacedBy(LocalMarkdownTheme.current.blockSpacing),
                 ) {
                     environment.header?.invoke()
-                    if (environment.renderMode == MarkdownRenderMode.SelectableColumn) {
-                        SelectionContainer {
-                            body()
-                        }
-                    } else {
-                        body()
-                    }
+                    body()
                     environment.footer?.invoke()
                 }
             }
@@ -168,37 +161,47 @@ private fun PaintBlock(block: com.hrm.markdown.renderer.internal.layout.model.In
             modifier = Modifier.fillMaxWidth(),
             renderChildren = ::PaintLayoutBlockChildren,
         )
+
         is LayoutColumnsBlockModel -> RenderColumnsLayoutGroupModel(
             model = block,
             modifier = Modifier.fillMaxWidth(),
-            renderChildren = ::PaintLayoutBlockChildren,
+            renderChildren = ::PaintLayoutBlockColumn,
         )
+
         is LayoutTableBlockModel -> RenderTableLayoutBlockModel(
             model = block,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectableBlock(block.identity.stableId, LocalMarkdownSelectionController.current),
         )
+
         is LayoutDefinitionListBlockModel -> RenderDefinitionListLayoutBlockModel(
             model = block,
             modifier = Modifier.fillMaxWidth(),
             renderChildren = ::PaintLayoutBlockChildren,
         )
+
         is LayoutFigureBlockModel -> RenderFigureLayoutBlockModel(
             model = block,
             modifier = Modifier.fillMaxWidth(),
         )
+
         is LayoutTocBlockModel -> RenderTocLayoutBlockModel(
             model = block,
             modifier = Modifier.fillMaxWidth(),
         )
+
         is LayoutBibliographyBlockModel -> RenderBibliographyLayoutBlockModel(
             model = block,
             modifier = Modifier.fillMaxWidth(),
         )
+
         is LayoutTabBlockModel -> RenderTabLayoutBlockModel(
             model = block,
             modifier = Modifier.fillMaxWidth(),
-            renderChildren = ::PaintLayoutBlockChildren,
+            renderChildren = ::PaintLayoutBlockColumn,
         )
+
         is LayoutFootnoteBlockModel -> RenderFootnoteLayoutBlockModel(
             model = block,
             modifier = Modifier.fillMaxWidth(),
@@ -218,7 +221,14 @@ private fun PaintBlock(block: com.hrm.markdown.renderer.internal.layout.model.In
                 }
             },
         )
-        is LayoutWidgetBlockModel -> PaintWidgetBlock(block)
+
+        is LayoutWidgetBlockModel -> PaintWidgetBlock(
+            block,
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectableBlock(block.identity.stableId, LocalMarkdownSelectionController.current),
+        )
+
         is LayoutInlineBlockModel -> PaintInlineBlock(block)
     }
 }
@@ -245,10 +255,14 @@ private fun PaintRenderBlock(block: LayoutRenderBlockModel) {
             model = renderBlock,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            PaintLayoutBlockChildren(block.children)
+            PaintLayoutBlockColumn(block.children)
         }
 
-        is ListBlockModel -> RenderListBlockModel(model = renderBlock, modifier = Modifier.fillMaxWidth(), renderChildren = ::PaintRenderBlockChildren)
+        is ListBlockModel -> RenderListBlockModel(
+            model = renderBlock,
+            modifier = Modifier.fillMaxWidth(),
+            renderChildren = ::PaintRenderBlockChildren
+        )
 
         is TableBlockModel -> RenderTableBlockModel(
             model = renderBlock,
@@ -289,7 +303,11 @@ private fun PaintRenderBlock(block: LayoutRenderBlockModel) {
             }
         }
 
-        is ColumnsLayoutBlockModel -> RenderColumnsLayoutBlockModel(model = renderBlock, modifier = Modifier.fillMaxWidth(), renderChildren = ::PaintRenderBlockChildren)
+        is ColumnsLayoutBlockModel -> RenderColumnsLayoutBlockModel(
+            model = renderBlock,
+            modifier = Modifier.fillMaxWidth(),
+            renderChildren = ::PaintRenderBlockColumn
+        )
 
         is DefinitionListBlockModel -> RenderDefinitionListBlockModel(
             model = renderBlock,
@@ -334,7 +352,7 @@ private fun PaintRenderBlock(block: LayoutRenderBlockModel) {
                         tagName = renderBlock.tagName,
                         args = renderBlock.args,
                         content = if (block.children.isNotEmpty()) {
-                            { PaintLayoutBlockChildren(block.children) }
+                            { PaintLayoutBlockColumn(block.children) }
                         } else {
                             null
                         },
@@ -354,7 +372,11 @@ private fun PaintRenderBlock(block: LayoutRenderBlockModel) {
             }
         }
 
-        is TabBlockModel -> RenderTabBlockModel(model = renderBlock, modifier = Modifier.fillMaxWidth(), renderChildren = ::PaintRenderBlockChildren)
+        is TabBlockModel -> RenderTabBlockModel(
+            model = renderBlock,
+            modifier = Modifier.fillMaxWidth(),
+            renderChildren = ::PaintRenderBlockColumn
+        )
 
         is BibliographyDefinitionBlockModel -> RenderBibliographyBlockModel(
             model = renderBlock,
@@ -394,7 +416,11 @@ private fun PaintRenderBlock(block: LayoutRenderBlockModel) {
 
 @Composable
 private fun PaintInlineBlock(block: LayoutInlineBlockModel) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectableBlock(block.identity.stableId, LocalMarkdownSelectionController.current)
+    ) {
         PaintInlineLayoutContent(block = block, modifier = Modifier.fillMaxWidth())
         if (block.showDivider) {
             HorizontalDivider(
@@ -407,6 +433,18 @@ private fun PaintInlineBlock(block: LayoutInlineBlockModel) {
 }
 
 @Composable
+private fun PaintRenderBlockColumn(
+    blocks: List<InternalRenderBlockModel>,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(LocalMarkdownTheme.current.blockSpacing),
+    ) {
+        PaintRenderBlockChildren(blocks)
+    }
+}
+
+@Composable
 private fun PaintRenderBlockChildren(
     blocks: List<InternalRenderBlockModel>,
 ) {
@@ -414,6 +452,18 @@ private fun PaintRenderBlockChildren(
         key(block.identity.stableId) {
             PaintCompiledBlock(block)
         }
+    }
+}
+
+@Composable
+private fun PaintLayoutBlockColumn(
+    blocks: List<com.hrm.markdown.renderer.internal.layout.model.InternalLayoutBlockModel>,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(LocalMarkdownTheme.current.blockSpacing),
+    ) {
+        PaintLayoutBlockChildren(blocks)
     }
 }
 
@@ -451,7 +501,10 @@ private fun PaintCompiledBlock(block: InternalRenderBlockModel) {
 }
 
 @Composable
-private fun PaintWidgetBlock(block: LayoutWidgetBlockModel) {
+private fun PaintWidgetBlock(
+    block: LayoutWidgetBlockModel,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+) {
     when (val widget = block.widget) {
         is CodeBlockWidgetModel -> FencedCodeBlockRenderer(
             text = widget.code,
@@ -460,17 +513,17 @@ private fun PaintWidgetBlock(block: LayoutWidgetBlockModel) {
             showLineNumbers = (block.block as? CodeBlockModel)?.showLineNumbers ?: true,
             startLine = (block.block as? CodeBlockModel)?.startLine ?: 1,
             highlightedLines = (block.block as? CodeBlockModel)?.highlightedLines ?: emptySet(),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier,
         )
 
         is MathBlockWidgetModel -> MathBlockRenderer(
             latex = widget.latex,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier,
         )
 
         is DiagramBlockWidgetModel -> RenderDiagramBlockWidgetModel(
             model = widget,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier,
         )
     }
 }

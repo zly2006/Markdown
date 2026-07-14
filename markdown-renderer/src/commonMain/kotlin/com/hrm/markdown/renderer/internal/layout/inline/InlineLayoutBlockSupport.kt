@@ -9,7 +9,6 @@ import com.hrm.markdown.renderer.MarkdownTheme
 import com.hrm.markdown.renderer.inline.InlinePlaceholderId
 import com.hrm.markdown.renderer.inline.InlineRenderResult
 import com.hrm.markdown.renderer.inline.InlineWidgetPaintPayload
-import com.hrm.markdown.renderer.inline.buildInlineRenderResultFromModel
 import com.hrm.markdown.renderer.internal.core.identity.RenderIdentity
 import com.hrm.markdown.renderer.internal.core.identity.renderIdentityFromText
 import com.hrm.markdown.renderer.internal.core.model.InlineModel
@@ -46,7 +45,10 @@ internal fun buildInlineLayoutLines(
                 is LineItem.TextItem -> {
                     val run = LayoutTextRun(
                         identity = RenderIdentity(
-                            stableId = renderIdentityFromText(item.text.text, identity.stableId + cursorX.toLong()),
+                            stableId = renderIdentityFromText(
+                                item.text.text,
+                                identity.stableId + cursorX.toLong()
+                            ),
                             contentRevision = identity.contentRevision,
                             layoutRevision = identity.layoutRevision,
                             paintRevision = identity.paintRevision,
@@ -64,7 +66,8 @@ internal fun buildInlineLayoutLines(
                         identity = widget?.identity ?: identity,
                         frame = LayoutRect(cursorX, lineTop, item.widthPx, item.heightPx),
                         id = item.id,
-                        widget = widget ?: throw IllegalStateException("Missing inline widget for placeholder ${item.id}"),
+                        widget = widget
+                            ?: throw IllegalStateException("Missing inline widget for placeholder ${item.id}"),
                         alternateText = item.alternateText,
                     )
                     cursorX += item.widthPx
@@ -122,16 +125,19 @@ internal fun buildInlineLayoutBlockFromModel(
     latexMeasurer: LatexMeasurerState,
     density: Density,
     textMeasurer: TextMeasurer,
+    inlineLayoutRuntime: InlineLayoutRuntime,
+    inlineLayoutEpoch: InlineLayoutEpoch,
     codeTheme: CodeTheme? = null,
     onLinkClick: ((String) -> Unit)? = null,
     onFootnoteClick: ((String) -> Unit)? = null,
     maxLines: Int = Int.MAX_VALUE,
     showDivider: Boolean = false,
 ): LayoutInlineBlockModel {
-    val inlineResult = buildInlineRenderResultFromModel(
+    val inlineResult = inlineLayoutRuntime.renderResult(
         model = model,
+        style = style,
+        epoch = inlineLayoutEpoch,
         theme = theme,
-        hostTextStyle = style,
         directiveRegistry = directiveRegistry,
         onLinkClick = onLinkClick,
         onFootnoteClick = onFootnoteClick,
@@ -152,6 +158,8 @@ internal fun buildInlineLayoutBlockFromModel(
         inlineResult = inlineResult,
         density = density,
         textMeasurer = textMeasurer,
+        inlineLayoutRuntime = inlineLayoutRuntime,
+        inlineLayoutEpoch = inlineLayoutEpoch,
         maxLines = maxLines,
         showDivider = showDivider,
     )
@@ -169,18 +177,22 @@ internal fun buildInlineLayoutBlockFromResult(
     inlineResult: InlineRenderResult,
     density: Density,
     textMeasurer: TextMeasurer,
+    inlineLayoutRuntime: InlineLayoutRuntime,
+    inlineLayoutEpoch: InlineLayoutEpoch,
     maxLines: Int = Int.MAX_VALUE,
     showDivider: Boolean = false,
 ): LayoutInlineBlockModel {
     val contentLeft = left + insets.left
     val contentTop = top + insets.top
     val contentWidth = (width - insets.left - insets.right).coerceAtLeast(0f)
-    val layout = computeInlineFlowLayout(
-        input = inlineResult.flowInput,
+    val layout = inlineLayoutRuntime.flowLayout(
+        identity = identity,
+        inlineResult = inlineResult,
         style = style,
+        epoch = inlineLayoutEpoch,
         density = density,
         textMeasurer = textMeasurer,
-        maxWidthPx = contentWidth,
+        widthPx = contentWidth,
         maxLines = maxLines,
     )
     val dividerHeight = if (showDivider) {

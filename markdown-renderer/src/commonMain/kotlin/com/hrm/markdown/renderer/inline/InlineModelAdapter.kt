@@ -30,6 +30,7 @@ import com.hrm.latex.renderer.measure.LatexMeasurerState
 import com.hrm.latex.renderer.model.LatexConfig
 import com.hrm.markdown.parser.core.CharacterUtils
 import com.hrm.markdown.renderer.DefaultMarkdownImage
+import com.hrm.markdown.renderer.LocalImageRenderer
 import com.hrm.markdown.renderer.MarkdownImageData
 import com.hrm.markdown.renderer.MarkdownTheme
 import com.hrm.markdown.renderer.internal.adapter.createDirectiveInlineRenderScope
@@ -87,41 +88,6 @@ internal fun buildInlineRenderResultFromModel(
         paintPayloads = context.paintPayloads,
         flowInput = InlineFlowInput(flowSegments),
     )
-}
-
-internal fun buildInlineFlowInputFromModel(
-    model: InlineModel,
-    theme: MarkdownTheme,
-    hostTextStyle: TextStyle,
-    directiveRegistry: MarkdownDirectiveRegistry,
-    onLinkClick: ((String) -> Unit)? = null,
-    onFootnoteClick: ((String) -> Unit)? = null,
-    latexMeasurer: LatexMeasurerState,
-    density: Density,
-    textMeasurer: TextMeasurer,
-    codeTheme: CodeTheme? = null,
-): InlineFlowInput {
-    val flowSegments = mutableListOf<InlineFlowSegment>()
-    val context = InlineRenderBuildContext(
-        paintPayloads = linkedMapOf(),
-        flowSegments = flowSegments,
-    )
-    AnnotatedString.Builder().apply {
-        renderInlineModel(
-            model = model,
-            theme = theme,
-            hostTextStyle = hostTextStyle,
-            context = context,
-            directiveRegistry = directiveRegistry,
-            onLinkClick = onLinkClick,
-            onFootnoteClick = onFootnoteClick,
-            latexMeasurer = latexMeasurer,
-            density = density,
-            textMeasurer = textMeasurer,
-            inlineCodeTheme = codeTheme,
-        )
-    }
-    return InlineFlowInput(flowSegments)
 }
 
 internal fun AnnotatedString.Builder.renderInlineModel(
@@ -414,16 +380,20 @@ private fun AnnotatedString.Builder.renderImageWidget(
         widthPx = widget.width?.toFloat() ?: 200f,
         heightPx = widget.height?.toFloat() ?: 150f,
     ) {
-        DefaultMarkdownImage(
-            data = MarkdownImageData(
-                url = widget.url,
-                altText = widget.altText,
-                title = widget.title,
-                width = widget.width,
-                height = widget.height,
-                attributes = widget.attributes,
-            )
+        val imageData = MarkdownImageData(
+            url = widget.url,
+            altText = widget.altText,
+            title = widget.title,
+            width = widget.width,
+            height = widget.height,
+            attributes = widget.attributes,
         )
+        val customRenderer = LocalImageRenderer.current
+        if (customRenderer != null) {
+            customRenderer(imageData, Modifier)
+        } else {
+            DefaultMarkdownImage(data = imageData)
+        }
     }
 }
 

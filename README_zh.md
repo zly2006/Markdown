@@ -4,8 +4,8 @@
 
 **极速、跨平台的 Compose Multiplatform Markdown 引擎**
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
-[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.11.0-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.0-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.11.1-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.huarangmeng/markdown-parser.svg?color=orange&label=Maven%20Central)](https://central.sonatype.com/search?q=io.github.huarangmeng.markdown)
 [![CommonMark](https://img.shields.io/badge/CommonMark%200.31.2-652%2F652%20✓-brightgreen)](https://spec.commonmark.org/0.31.2/)
 [![Android API](https://img.shields.io/badge/Android%20API-23%2B-34A853?logo=android&logoColor=white)](https://android-arsenal.com/api?level=24)
@@ -31,7 +31,7 @@
 | 📊 | **LaTeX 数学公式** | 支持行内 `$...$` 和块级 `$$...$$` 数学公式，集成 LaTeX 渲染引擎 |
 | 🔍 | **内置语法诊断** | 13+ 诊断规则，包含 WCAG 无障碍检查 — 在解析时即发现问题 |
 | 🖼️ | **图片加载** | 开箱即用的 Coil3 + Ktor3 图片加载，支持尺寸指定和自定义渲染器 |
-| 📄 | **分页加载** | 超长文档（500+ 块）渐进式渲染，滚动到底部自动加载 |
+| 🖱️ | **跨 Block 选中** | 基于 LazyColumn 的自研选区层 —— 跨 block 连续选中，复用系统复制/翻译菜单，超长文档首帧不卡 |
 
 ---
 

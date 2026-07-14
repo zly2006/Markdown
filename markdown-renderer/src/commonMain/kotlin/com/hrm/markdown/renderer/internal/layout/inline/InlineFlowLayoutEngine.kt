@@ -19,6 +19,14 @@ internal fun computeInlineFlowLayout(
     maxWidthPx: Float,
     maxLines: Int,
 ): InlineFlowLayout {
+    if (maxLines <= 0 || maxWidthPx <= 0f) {
+        return InlineFlowLayout(
+            widthPx = maxWidthPx.coerceAtLeast(0f),
+            heightPx = 0f,
+            lines = emptyList(),
+        )
+    }
+
     val textStyle = textMeasurementStyle(style)
     val baseLineHeightPx = baseLineHeightPx(style, density)
     val baseMetrics = textMeasurer.measure(
@@ -58,6 +66,23 @@ internal fun computeInlineFlowLayout(
     var currentWidth = 0f
     var maxItemHeight = 0f
     var lineCount = 0
+
+    fun appendTextItem(
+        text: AnnotatedString,
+        measured: MeasuredText,
+        widthPx: Float = measured.widthPx,
+    ) {
+        currentItems.add(
+            LineItem.TextItem(
+                text = text,
+                widthPx = widthPx.coerceAtLeast(0f),
+                heightPx = measured.heightPx,
+                baselinePx = measured.baselinePx,
+            )
+        )
+        currentWidth += widthPx.coerceAtLeast(0f)
+        maxItemHeight = maxOf(maxItemHeight, measured.heightPx)
+    }
 
     fun flushLine(force: Boolean = false) {
         if (!force && currentItems.isEmpty()) return
@@ -110,45 +135,64 @@ internal fun computeInlineFlowLayout(
                 while (remaining.isNotEmpty() && lineCount < maxLines) {
                     val measured = measureText(remaining)
                     val w = measured.widthPx
-                    val h = measured.heightPx
                     val used = currentWidth
-                    if (used + w <= maxWidthPx) {
-                        currentItems.add(
-                            LineItem.TextItem(
-                                text = remaining,
-                                widthPx = w,
-                                heightPx = h,
-                                baselinePx = measured.baselinePx,
-                            )
-                        )
-                        currentWidth += w
-                        maxItemHeight = maxOf(maxItemHeight, h)
+                    val available = (maxWidthPx - used).coerceAtLeast(0f)
+                    if (w <= available) {
+                        appendTextItem(remaining, measured)
                         break
+                    }
+
+                    if (available <= 0f && currentItems.isNotEmpty()) {
+                        flushLine(force = true)
+                        continue
                     }
 
                     val fit = splitTextToFit(
                         text = remaining,
                         style = textStyle,
                         textMeasurer = textMeasurer,
-                        maxWidthPx = (maxWidthPx - used).coerceAtLeast(1f),
+                        maxWidthPx = available,
                     )
                     if (fit.fit.isNotEmpty()) {
-                        val fitMeasured = measureText(fit.fit)
-                        val fw = fitMeasured.widthPx
-                        val fh = fitMeasured.heightPx
-                        currentItems.add(
-                            LineItem.TextItem(
-                                text = fit.fit,
-                                widthPx = fw,
-                                heightPx = fh,
-                                baselinePx = fitMeasured.baselinePx,
-                            )
+                        val adjustedFit = shrinkTextToWidth(
+                            text = fit.fit,
+                            style = textStyle,
+                            textMeasurer = textMeasurer,
+                            maxWidthPx = available,
                         )
-                        currentWidth += fw
-                        maxItemHeight = maxOf(maxItemHeight, fh)
+                        if (adjustedFit.isEmpty()) {
+                            if (currentItems.isNotEmpty()) {
+                                flushLine(force = true)
+                                continue
+                            }
+                        } else {
+                            val fitMeasured = measureText(adjustedFit)
+                            appendTextItem(
+                                text = adjustedFit,
+                                measured = fitMeasured,
+                            )
+                            flushLine(force = true)
+                            remaining = remaining
+                                .subSequence(adjustedFit.length, remaining.length)
+                                .trimLeadingSpaces()
+                            continue
+                        }
                     }
+
+                    if (currentItems.isNotEmpty()) {
+                        flushLine(force = true)
+                        continue
+                    }
+
+                    val cut = firstBreakIndex(remaining.text)
+                    val emergencyFit = remaining.subSequence(0, cut)
+                    val emergencyMeasured = measureText(emergencyFit)
+                    appendTextItem(
+                        text = emergencyFit,
+                        measured = emergencyMeasured,
+                    )
                     flushLine(force = true)
-                    remaining = fit.rest.trimLeadingSpaces()
+                    remaining = remaining.subSequence(cut, remaining.length)
                 }
             }
         }
@@ -176,13 +220,70 @@ internal fun computeInlineFlowLayout(
 
 private data class SplitResult(val fit: AnnotatedString, val rest: AnnotatedString)
 
+private fun shrinkTextToWidth(
+    text: AnnotatedString,
+    style: TextStyle,
+    textMeasurer: TextMeasurer,
+    maxWidthPx: Float,
+): AnnotatedString {
+    if (text.isEmpty() || maxWidthPx <= 0f) return AnnotatedString("")
+    val fullWidth = textMeasurer.measure(
+        text = text,
+        style = style,
+        constraints = Constraints(maxWidth = Int.MAX_VALUE),
+        maxLines = 1,
+        softWrap = false,
+    ).size.width.toFloat()
+    if (fullWidth <= maxWidthPx) return text
+
+    var lo = 1
+    var hi = text.length
+    var best = 0
+    while (lo <= hi) {
+        val mid = safeBreakIndex(text.text, (lo + hi) / 2)
+        if (mid <= 0) {
+            hi = -1
+            continue
+        }
+        val sub = text.subSequence(0, mid)
+        val width = textMeasurer.measure(
+            text = sub,
+            style = style,
+            constraints = Constraints(maxWidth = Int.MAX_VALUE),
+            maxLines = 1,
+            softWrap = false,
+        ).size.width.toFloat()
+        if (width <= maxWidthPx) {
+            best = mid
+            lo = mid + 1
+        } else {
+            hi = mid - 1
+        }
+    }
+    if (best <= 0) return AnnotatedString("")
+    return text.subSequence(0, safeBreakIndex(text.text, best))
+}
+
 private fun splitTextToFit(
     text: AnnotatedString,
     style: TextStyle,
     textMeasurer: TextMeasurer,
     maxWidthPx: Float,
 ): SplitResult {
-    if (text.isEmpty()) return SplitResult(AnnotatedString(""), AnnotatedString(""))
+    if (text.isEmpty() || maxWidthPx <= 0f) return SplitResult(AnnotatedString(""), text)
+    val softWrapCut = firstSoftWrapLineEnd(
+        text = text,
+        style = style,
+        textMeasurer = textMeasurer,
+        maxWidthPx = maxWidthPx,
+    )
+    if (softWrapCut != null) {
+        return SplitResult(
+            fit = text.subSequence(0, softWrapCut),
+            rest = text.subSequence(softWrapCut, text.length),
+        )
+    }
+
     val full = text.text
     var lo = 0
     var hi = full.length
@@ -204,7 +305,7 @@ private fun splitTextToFit(
             hi = mid - 1
         }
     }
-    if (best <= 0) best = 1.coerceAtMost(full.length)
+    if (best <= 0) return SplitResult(AnnotatedString(""), text)
 
     val region = full.substring(0, best)
     val lastSpace = region.indexOfLast { it.isWhitespace() }
@@ -213,6 +314,43 @@ private fun splitTextToFit(
         fit = text.subSequence(0, cut),
         rest = text.subSequence(cut, full.length),
     )
+}
+
+private fun firstSoftWrapLineEnd(
+    text: AnnotatedString,
+    style: TextStyle,
+    textMeasurer: TextMeasurer,
+    maxWidthPx: Float,
+): Int? {
+    val layout = textMeasurer.measure(
+        text = text,
+        style = style,
+        constraints = Constraints(maxWidth = ceil(maxWidthPx).toInt().coerceAtLeast(1)),
+        maxLines = 1,
+        softWrap = true,
+    )
+    if (!layout.didOverflowWidth && !layout.hasVisualOverflow) return null
+
+    val lineEnd = layout.getLineEnd(lineIndex = 0, visibleEnd = false)
+    return lineEnd.takeIf { it in 1 until text.length }
+}
+
+private fun firstBreakIndex(text: String): Int {
+    if (text.length >= 2 && text[0].isHighSurrogate() && text[1].isLowSurrogate()) {
+        return 2
+    }
+    return 1.coerceAtMost(text.length)
+}
+
+private fun safeBreakIndex(text: String, index: Int): Int {
+    val bounded = index.coerceIn(0, text.length)
+    if (bounded in 1 until text.length &&
+        text[bounded - 1].isHighSurrogate() &&
+        text[bounded].isLowSurrogate()
+    ) {
+        return bounded - 1
+    }
+    return bounded
 }
 
 private fun AnnotatedString.trimLeadingSpaces(): AnnotatedString {
@@ -242,7 +380,6 @@ internal fun placeholderSizePx(
 internal fun computeMaxIntrinsicWidthPx(
     input: InlineFlowInput,
     style: TextStyle,
-    density: Density,
     textMeasurer: TextMeasurer,
 ): Int {
     val textStyle = textMeasurementStyle(style)
@@ -279,7 +416,6 @@ internal fun computeMaxIntrinsicWidthPx(
 internal fun computeMinIntrinsicWidthPx(
     input: InlineFlowInput,
     style: TextStyle,
-    density: Density,
     textMeasurer: TextMeasurer,
 ): Int {
     val textStyle = textMeasurementStyle(style)
@@ -313,33 +449,4 @@ internal fun computeMinIntrinsicWidthPx(
         }
     }
     return ceil(maxPieceWidth).toInt()
-}
-
-internal fun computeIntrinsicHeightPx(
-    input: InlineFlowInput,
-    style: TextStyle,
-    density: Density,
-    textMeasurer: TextMeasurer,
-    maxLines: Int,
-    widthPx: Int,
-): Int {
-    val targetWidth = if (widthPx == Constraints.Infinity || widthPx <= 0) {
-        computeMaxIntrinsicWidthPx(
-            input,
-            style,
-            density,
-            textMeasurer
-        ).coerceAtLeast(1)
-    } else {
-        widthPx
-    }
-    val layout = computeInlineFlowLayout(
-        input = input,
-        style = style,
-        density = density,
-        textMeasurer = textMeasurer,
-        maxWidthPx = targetWidth.toFloat(),
-        maxLines = maxLines,
-    )
-    return ceil(layout.heightPx).toInt()
 }

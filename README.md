@@ -4,8 +4,8 @@
 
 **A Blazing-Fast, Cross-Platform Markdown Engine for Compose Multiplatform**
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
-[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.11.0-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.0-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.11.1-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.huarangmeng/markdown-parser.svg?color=orange&label=Maven%20Central)](https://central.sonatype.com/search?q=io.github.huarangmeng.markdown)
 [![CommonMark](https://img.shields.io/badge/CommonMark%200.31.2-652%2F652%20✓-brightgreen)](https://spec.commonmark.org/0.31.2/)
 [![Android API](https://img.shields.io/badge/Android%20API-23%2B-34A853?logo=android&logoColor=white)](https://android-arsenal.com/api?level=24)
@@ -31,7 +31,7 @@
 | 📊 | **LaTeX Math** | Inline `$...$` and block `$$...$$` formulas via integrated LaTeX rendering engine |
 | 🔍 | **Built-in Linting** | 13+ diagnostic rules including WCAG accessibility checks — catch issues at parse time |
 | 🖼️ | **Image Loading** | Coil3 + Ktor3 out-of-the-box, with size specification and custom renderer support |
-| 📄 | **Pagination** | Progressive rendering for ultra-long documents (500+ blocks) with auto load-more |
+| 🖱️ | **Cross-Block Selection** | DIY selection layer over LazyColumn — continuous selection across blocks, reuses the system copy/translate menu, no first-frame stall on huge docs |
 
 ---
 

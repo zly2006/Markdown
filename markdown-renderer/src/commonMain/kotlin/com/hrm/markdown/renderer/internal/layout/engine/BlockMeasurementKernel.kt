@@ -2,8 +2,7 @@ package com.hrm.markdown.renderer.internal.layout.engine
 
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import com.hrm.markdown.parser.ast.Table
-import com.hrm.markdown.renderer.inline.buildInlineFlowInputFromModel
+import androidx.compose.ui.unit.sp
 import com.hrm.markdown.renderer.internal.core.model.BibliographyDefinitionBlockModel
 import com.hrm.markdown.renderer.internal.core.model.DefinitionDescriptionBlockModel
 import com.hrm.markdown.renderer.internal.core.model.DefinitionListBlockModel
@@ -20,8 +19,6 @@ import com.hrm.markdown.renderer.internal.core.model.TabBlockModel
 import com.hrm.markdown.renderer.internal.core.model.TableBlockModel
 import com.hrm.markdown.renderer.internal.core.model.ThematicBreakBlockModel
 import com.hrm.markdown.renderer.internal.core.model.TocBlockModel
-import com.hrm.markdown.renderer.internal.layout.inline.computeInlineFlowLayout
-import androidx.compose.ui.unit.sp
 
 internal fun LayoutEnvironment.measureInlineBlock(
     model: InlineModel,
@@ -29,22 +26,27 @@ internal fun LayoutEnvironment.measureInlineBlock(
     widthPx: Float,
 ): Float {
     if (widthPx <= 0f) return 0f
-    val flowInput = buildInlineFlowInputFromModel(
+    val inlineResult = inlineLayoutRuntime.renderResult(
         model = model,
+        style = style,
+        epoch = inlineLayoutEpoch,
         theme = markdownTheme,
-        hostTextStyle = style,
         directiveRegistry = compileEnvironment.directiveRegistry,
+        onLinkClick = onLinkClick,
+        onFootnoteClick = onFootnoteClick,
         latexMeasurer = latexMeasurer,
         density = density,
         textMeasurer = textMeasurer,
         codeTheme = codeTheme,
     )
-    return computeInlineFlowLayout(
-        input = flowInput,
+    return inlineLayoutRuntime.flowLayout(
+        identity = model.identity,
+        inlineResult = inlineResult,
         style = style,
+        epoch = inlineLayoutEpoch,
         density = density,
         textMeasurer = textMeasurer,
-        maxWidthPx = widthPx,
+        widthPx = widthPx,
         maxLines = Int.MAX_VALUE,
     ).heightPx
 }
@@ -56,15 +58,24 @@ internal fun LayoutEnvironment.measureLeafBlockContentHeight(
     is ParagraphBlockModel -> measureInlineBlock(block.inline, markdownTheme.bodyStyle, widthPx)
 
     is HeadingBlockModel -> {
-        val style = markdownTheme.headingStyles[(block.level - 1).coerceIn(0, markdownTheme.headingStyles.lastIndex)]
+        val style = markdownTheme.headingStyles[(block.level - 1).coerceIn(
+            0,
+            markdownTheme.headingStyles.lastIndex
+        )]
         measureInlineBlock(block.inline, style, widthPx) + if (block.level <= 2) 8f else 0f
     }
 
     is TableBlockModel -> measureTableBlockContentHeight(block, widthPx)
     is DefinitionListBlockModel -> measureDefinitionListContentHeight(block, widthPx)
     is TocBlockModel -> measureTocContentHeight(block, widthPx)
-    is HtmlBlockModel -> block.html.lineSequence().count().coerceAtLeast(1) * lineHeightPx(markdownTheme.codeBlockStyle)
-    is BibliographyDefinitionBlockModel -> block.entries.size.coerceAtLeast(1) * lineHeightPx(markdownTheme.bodyStyle) + 32f
+    is HtmlBlockModel -> block.html.lineSequence().count().coerceAtLeast(1) * lineHeightPx(
+        markdownTheme.codeBlockStyle
+    )
+
+    is BibliographyDefinitionBlockModel -> block.entries.size.coerceAtLeast(1) * lineHeightPx(
+        markdownTheme.bodyStyle
+    ) + 32f
+
     is FigureBlockModel -> 220f + if (block.caption.isNotBlank()) lineHeightPx(markdownTheme.bodyStyle) else 0f
     is PageBreakBlockModel -> 28f
     is ThematicBreakBlockModel -> 16f
@@ -78,28 +89,27 @@ private fun LayoutEnvironment.measureTableBlockContentHeight(
     widthPx: Float,
 ): Float {
     if (block.rows.isEmpty()) return lineHeightPx(markdownTheme.bodyStyle)
-    val columnCount = block.columnAlignments.size.coerceAtLeast(block.rows.maxOfOrNull { it.cells.size } ?: 1).coerceAtLeast(1)
+    val columnCount = tableColumnCount(block)
     val horizontalPadding = with(density) { markdownTheme.tableCellPadding.toPx() } * 2f
-    val cellWidth = (widthPx / columnCount.toFloat()).coerceAtLeast(40f)
+    val columnWidths = computeTableColumnWidths(block, widthPx)
     return block.rows.sumOf { row ->
-        val rowHeight = row.cells.map { cell ->
-            val align = when (cell.alignment) {
-                Table.Alignment.LEFT -> androidx.compose.ui.text.style.TextAlign.Start
-                Table.Alignment.CENTER -> androidx.compose.ui.text.style.TextAlign.Center
-                Table.Alignment.RIGHT -> androidx.compose.ui.text.style.TextAlign.End
-                Table.Alignment.NONE -> androidx.compose.ui.text.style.TextAlign.Start
+        var rowHeight = lineHeightPx(markdownTheme.bodyStyle) + horizontalPadding
+        for (colIndex in 0 until columnCount) {
+            val cell = row.cells.getOrNull(colIndex) ?: continue
+            val alignment = block.columnAlignments.getOrElse(colIndex) {
+                com.hrm.markdown.parser.ast.Table.Alignment.NONE
             }
-            val style = if (cell.isHeader) {
-                markdownTheme.bodyStyle.copy(fontWeight = FontWeight.Bold, textAlign = align)
-            } else {
-                markdownTheme.bodyStyle.copy(textAlign = align)
-            }
-            measureInlineBlock(
-                model = cell.inline,
-                style = style,
-                widthPx = (cellWidth - horizontalPadding).coerceAtLeast(16f),
-            ) + horizontalPadding
-        }.maxOrNull() ?: lineHeightPx(markdownTheme.bodyStyle)
+            val style = tableCellTextStyle(alignment, row.isHeader)
+            val cellWidth = columnWidths.getOrElse(colIndex) { 0f }
+            rowHeight = maxOf(
+                rowHeight,
+                measureInlineBlock(
+                    model = cell.inline,
+                    style = style,
+                    widthPx = (cellWidth - horizontalPadding).coerceAtLeast(16f),
+                ) + horizontalPadding,
+            )
+        }
         rowHeight.toDouble()
     }.toFloat()
 }
@@ -122,7 +132,10 @@ private fun LayoutEnvironment.measureDefinitionListContentHeight(
 
             is DefinitionDescriptionBlockModel -> {
                 item.children.sumOf { child ->
-                    measureLeafBlockContentHeight(child, (widthPx - indent).coerceAtLeast(0f)).toDouble()
+                    measureLeafBlockContentHeight(
+                        child,
+                        (widthPx - indent).coerceAtLeast(0f)
+                    ).toDouble()
                 } + spacing
             }
         }
@@ -144,7 +157,8 @@ internal fun LayoutEnvironment.measureTocEntryHeight(
     entry: com.hrm.markdown.renderer.internal.core.model.TocEntryBlockModel,
     widthPx: Float,
 ): Float {
-    val stableId = com.hrm.markdown.renderer.internal.core.identity.renderIdentityFromText(entry.text)
+    val stableId =
+        com.hrm.markdown.renderer.internal.core.identity.renderIdentityFromText(entry.text)
     val pseudoModel = InlineModel(
         identity = com.hrm.markdown.renderer.internal.core.identity.RenderIdentity(
             stableId = stableId,

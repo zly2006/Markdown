@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.composeCompiler)
     alias(libs.plugins.mavenPublish)
 }
 
@@ -42,7 +41,6 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.compose.runtime)
             implementation(libs.kotlinx.coroutines.core)
         }
         commonTest.dependencies {

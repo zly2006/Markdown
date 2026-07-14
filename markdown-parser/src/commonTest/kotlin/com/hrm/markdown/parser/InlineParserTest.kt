@@ -70,13 +70,13 @@ class InlineParserTest {
             "Expected Emphasis or StrongEmphasis, got ${outer::class.simpleName}"
         )
         // 内层也应该是 Emphasis 或 StrongEmphasis
-        val inner = (outer as ContainerNode).children.first()
+        val inner = outer.children.first()
         assertTrue(
             inner is Emphasis || inner is StrongEmphasis,
             "Expected nested Emphasis or StrongEmphasis, got ${inner::class.simpleName}"
         )
         // 最里层应该是文本 "bold italic"
-        val text = (inner as ContainerNode).children.first()
+        val text = inner.children.first()
         assertIs<Text>(text)
         assertEquals("bold italic", text.literal)
     }
@@ -355,6 +355,31 @@ class InlineParserTest {
         val para = doc.children.first()
         assertIs<Paragraph>(para)
         assertTrue(para.children.any { it is InlineMath })
+    }
+
+    @Test
+    fun should_parse_numeric_inline_math_with_text_command() {
+        val doc = parser.parse(
+            "A battery does \$144\\text{ J}\$ of work with a potential difference of \$12\\text{ V}\$."
+        )
+        val para = doc.children.first()
+        assertIs<Paragraph>(para)
+
+        val math = para.children.filterIsInstance<InlineMath>()
+
+        assertEquals(listOf("144\\text{ J}", "12\\text{ V}"), math.map { it.literal })
+    }
+
+    @Test
+    fun should_parse_numeric_answer_as_inline_math() {
+        val doc = parser.parse("\$12\\text{ C}\$")
+        val para = doc.children.first()
+        assertIs<Paragraph>(para)
+
+        val math = para.children.single()
+
+        assertIs<InlineMath>(math)
+        assertEquals("12\\text{ C}", math.literal)
     }
 
     @Test
