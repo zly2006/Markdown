@@ -4,7 +4,20 @@
 
 当前同步包含列表缩进、marker 对齐、表格边框，以及超宽行内公式的布局和横向滚动修复。准确的来源提交、文件与哈希见 `docs/source-snapshot.json`。
 
-Markdown 包名前缀和 Maven group 为 `me.zly2006.markdown`。当前工程版本 `0.1.0-SNAPSHOT` 用于源码整理和本地构件验证，尚未发布到 Maven Central。正式版本号、签名和 Maven 发布计划留待后续确认。
+Markdown 包名前缀和 Maven group 为 `me.zly2006.markdown`。首个预览版 `0.1.0-alpha.1` 已发布到 Maven Central，版本说明见 `docs/releases/0.1.0-alpha.1.md`。
+
+```kotlin
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation("me.zly2006.markdown:markdown-renderer:0.1.0-alpha.1")
+}
+```
+
+KMP 项目将依赖放在 `commonMain.dependencies` 中，Gradle 会选择相应平台构件。renderer 会传递 parser、runtime、LaTeX 和 CodeHigh，不需要逐项添加。当前已发布 Android、JVM、iOS ARM64、iOS Simulator ARM64 和 macOS ARM64 构件。
 
 ## 模块与使用入口
 
@@ -47,6 +60,21 @@ Markdown(
 ./gradlew stageLocalArtifacts
 ```
 
-这会把八个模块的 KMP 根、JVM 和 Android 构件写入本地目录；不会上传 Maven Central，也不会写入用户的 `~/.m2`。八个模块统一使用 `me.zly2006.markdown` group，主要入口的坐标为 `me.zly2006.markdown:markdown-renderer:0.1.0-SNAPSHOT`。所有计划正式发布的平台构件仍需按 `docs/prepublication.md` 完成发布验收。
+这会把八个模块的 KMP 根、JVM 和 Android 构件写入本地目录；不会上传 Maven Central，也不会写入用户的 `~/.m2`。完整平台的签名构件可用 `stageReleaseArtifacts` 在本地构建，正式发布流程见 `docs/releasing.md`。
+
+## Android 许可证资源
+
+八个模块都附带完整许可文本。如果 Android 应用报告同名许可资源冲突，应合并这些文件，保留其内容：
+
+```kotlin
+android {
+    packaging.resources.merges += listOf(
+        "META-INF/LICENSE-MIT.txt",
+        "META-INF/LICENSE-UPSTREAM-MIT.txt",
+        "META-INF/LICENSE-APACHE-2.0.txt",
+        "META-INF/NOTICE.md",
+    )
+}
+```
 
 来源、API 迁移和依赖边界见 `docs/architecture.md`；原始清单见 `docs/source-snapshot.json`；版权归属见 `NOTICE.md`。

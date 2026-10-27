@@ -2269,12 +2269,13 @@
       "source": "third_party/markdown/markdown-renderer/build.gradle.kts",
       "target": "markdown-renderer/build.gradle.kts",
       "source_sha256": "a74d6a23baa821f1ed4e01972ca5a0eccf302b22a679e65d56d2360b1cc06041",
-      "imported_sha256": "add85ad27a6c19824fc64c0a620a7fc910e2a2d0caeac29e5365cefc9fcbf69c",
+      "imported_sha256": "a9b212070a9af06d2acedad42efc3bd0bffdea420be673f02f4aa7d2065df0ae",
       "changes": [
         "package-relocation",
         "copyright-notice",
         "public-api-dependency-wiring",
-        "formatting-and-explicit-imports"
+        "formatting-and-explicit-imports",
+        "ios-foundation-friend-module-build-support"
       ],
       "initial_import_sha256": "a7cf1185fff143d56df111c7f64ca37649b34ab78b114b1652e3efa5a9bac407"
     },

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.tasks.PublishToMavenLocal
@@ -17,6 +18,8 @@ plugins {
     id("com.android.kotlin.multiplatform.library") version "9.4.0" apply false
     id("org.jetbrains.compose") version "1.11.1" apply false
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
+    id("com.vanniktech.maven.publish") version "0.37.0" apply false
+    id("org.jetbrains.dokka") version "2.2.0" apply false
 }
 
 allprojects {
@@ -33,6 +36,19 @@ val localRepositoryUrl =
 
 subprojects {
     apply(plugin = "maven-publish")
+    apply(plugin = "org.jetbrains.dokka")
+    apply(plugin = "com.vanniktech.maven.publish")
+
+    extensions.configure<MavenPublishBaseExtension> {
+        publishToMavenCentral(automaticRelease = false)
+        signAllPublications()
+    }
+    val centralStagingUrl =
+        layout.buildDirectory
+            .dir("publishing/mavenCentral")
+            .get()
+            .asFile
+            .toURI()
 
     tasks.withType<Jar>().configureEach {
         from(rootProject.file("distribution-resources"))
@@ -118,8 +134,11 @@ subprojects {
         notCompatibleWithConfigurationCache("The project-local destination guard requires the live publishing repository model")
         val allowedRepositoryUrl = localRepositoryUrl
         doFirst {
-            check(repository.url == allowedRepositoryUrl) {
-                "This preparation project only supports the project-local verification repository; remote publication is not configured."
+            check(
+                repository.url == allowedRepositoryUrl ||
+                    (repository.name == "mavenCentral" && repository.url == centralStagingUrl),
+            ) {
+                "Artifacts may only be staged in the project-local verification or Central staging repository."
             }
         }
     }
@@ -149,4 +168,10 @@ tasks.register("stageLocalArtifacts") {
             }
         },
     )
+}
+
+tasks.register("stageReleaseArtifacts") {
+    group = "publishing"
+    description = "构建并签名所有已声明平台的构件，仅写入工程内验证仓库。"
+    dependsOn(subprojects.map { "${it.path}:publishAllPublicationsToLocalVerificationRepository" })
 }

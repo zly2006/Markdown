@@ -50,35 +50,31 @@ kotlin {
             jvmTarget = JvmTarget.JVM_17
         }
     }
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64(),
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "MarkdownRenderer"
-            isStatic = true
-        }
-    }
-    macosArm64 {
+    listOf(iosArm64(), iosSimulatorArm64(), macosArm64()).forEach { target ->
         val foundationFriendModule =
             providers.provider {
                 configurations
-                    .getByName("macosArm64CompileKlibraries")
+                    .getByName("${target.name}CompileKlibraries")
                     .incoming
                     .artifactView {
                         componentFilter { identifier ->
                             identifier is ModuleComponentIdentifier &&
                                 identifier.group == "org.jetbrains.compose.foundation" &&
-                                identifier.module == "foundation-macosarm64"
+                                identifier.module == "foundation-${target.name.lowercase()}"
                         }
-                    }.files
-                    .singleFile
+                    }.files.singleFile
             }
-        compilations.configureEach {
+        target.compilations.configureEach {
             compileTaskProvider.configure {
                 compilerOptions.freeCompilerArgs.add(
                     foundationFriendModule.map { "-friend-modules=${it.absolutePath}" },
                 )
+            }
+        }
+        if (target.name.startsWith("ios")) {
+            target.binaries.framework {
+                baseName = "MarkdownRenderer"
+                isStatic = true
             }
         }
     }

@@ -1,6 +1,6 @@
 # 正式发布前仍需完成的事项
 
-源码已获准发布到 [zly2006/Markdown](https://github.com/zly2006/Markdown) 的 `main`，保留原仓库的 fork 关系。Maven 构件仍只做本地验证：工程没有配置 Maven Central 凭据、签名、远端 publication repository 或发布工作流，构件任务只允许写入工程内的文件仓库。
+源码已发布到 [zly2006/Markdown](https://github.com/zly2006/Markdown) 的 `main`，保留原仓库的 fork 关系。`0.1.0-alpha.1` 已于 2026-10-27 完成 Central 正式发布，所有平台构件已从公共仓库核对；后续版本继续按 `releasing.md` 执行。版本能力与迁移说明见 `releases/0.1.0-alpha.1.md`。
 
 ## 已整理的内容
 
@@ -12,9 +12,9 @@ Markdown 使用 `me.zly2006.markdown` 包名与 Maven group，parser、runtime�
 
 ## 发布决定
 
-源码仓库已确定，POM 的项目 URL 和 SCM 指向该仓库。正式 Maven 发布前仍需要确定 release 版本及维护方式；GitHub 源码公开不代表 Maven 构件已经发布。
+源码仓库已确定，POM 的项目 URL 和 SCM 指向该仓库。后续版本仍需确定 release 版本及维护方式；GitHub 源码公开与 Maven 构件发布应分别确认终态。
 
-还需要在 Maven Central 账户中确认 `me.zly2006` 或覆盖 `me.zly2006.markdown` 的 namespace 是否已经验证。包名本身不能证明发布权限；域名 namespace 的注册与所有权验证遵循 [Sonatype 的 namespace 说明](https://central.sonatype.org/faq/namespaces-and-dns/) 和 [Kotlin 的 Maven Central 发布教程](https://kotlinlang.org/docs/multiplatform/multiplatform-publish-libraries-to-maven.html)。本次没有查看账户发布权限，也没有创建 DNS 记录。
+本次 Central 校验已确认当前账户能发布 `me.zly2006.markdown`。后续更换 namespace 或发布账户时，应重新核对权限；域名 namespace 的注册与所有权验证遵循 [Sonatype 的 namespace 说明](https://central.sonatype.org/faq/namespaces-and-dns/) 和 [Kotlin 的 Maven Central 发布教程](https://kotlinlang.org/docs/multiplatform/multiplatform-publish-libraries-to-maven.html)。
 
 ## 构件验证
 
@@ -24,4 +24,4 @@ Markdown 使用 `me.zly2006.markdown` 包名与 Maven group，parser、runtime�
 
 正式发布还需配置并验证源码包、API 文档、签名与 Central 规则要求的元数据。完整的 MIT 与 Apache 2.0 许可、原版权、修改说明和依赖归属应在最终构件中读回检查，依据 [MIT](https://opensource.org/license/mit) 与 [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) 的许可文本保留。
 
-这些事项需要下一轮明确授权后再执行；当前不执行正式发布。
+本轮已获得发布授权，以上事项必须完成并记录实际结果后，才能宣布发布与应用迁移完成。
