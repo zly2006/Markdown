@@ -1,0 +1,220 @@
+/*
+ * Copyright (c) 2026 huarangmeng
+ * Copyright (c) 2026 Liyan Zhao (zly2006)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+package me.zly2006.markdown.parser.ast
+
+import me.zly2006.markdown.parser.LineRange
+import me.zly2006.markdown.parser.SourceRange
+
+/**
+ * 所有 AST 节点的基类。
+ * 节点通过父子关系形成树结构。
+ *
+ * Tree-sitter 风格增量解析支持：
+ * - 每个节点携带 [contentHash]，用于快速判断内容是否改变。
+ * - 增量解析时，若旧节点与新源文本对应区域的哈希一致，
+ *   则直接复用旧子树，无需重新解析。
+ */
+sealed class Node {
+    var sourceRange: SourceRange = SourceRange.EMPTY
+    var lineRange: LineRange = LineRange(0, 0)
+    var parent: Node? = null
+
+    /**
+     * 内容哈希：基于该节点所覆盖的源文本行内容计算。
+     * 用于增量解析时快速判断节点是否可复用。
+     */
+    var contentHash: Long = 0L
+
+    internal var siblingKey: Int = -1
+
+    /**
+     * 用于 Compose `key()` 的稳定身份标识，在同一文档树内唯一。
+     * 容器按结构槽位分配路径；替换节点继承原路径，因此内容或节点类型更新不会无故销毁
+     * 同一位置的组件，而同一源文本行拆出的多个同类型节点也不会发生冲突。
+     *
+     * 注意：不包含 contentHash，因为流式输入时内容每个 token 都在变，
+     * 如果 key 跟着变，Compose 会销毁旧组件再创建新组件，导致"闪缩"和状态丢失。
+     */
+    val stableKey: String
+        get() {
+            val parentKey = parent?.takeUnless { it is Document }?.stableKey
+            return if (parentKey.isNullOrEmpty()) "$siblingKey" else "$parentKey/$siblingKey"
+        }
+
+    /**
+     * 接受访问者进行树遍历。
+     */
+    abstract fun <R> accept(visitor: NodeVisitor<R>): R
+}
+
+/**
+ * 容器节点，可以包含子节点。
+ *
+ * 支持按需内联解析（Lazy Inline Parsing）：
+ * 块级解析完成后，行内内容可以延迟到首次访问 [children] 时才解析。
+ * 这优化了 IDE 语法高亮场景（只解析可见块）和长文档预览（分页 + 按需解析）。
+ *
+ * 通过 [setLazyInlineContent] 设置延迟解析内容，首次访问 [children] 时自动触发。
+ */
+sealed class ContainerNode : Node() {
+    private val _children: MutableList<Node> = mutableListOf()
+    private var nextChildKey: Int = 0
+
+    /**
+     * 延迟行内解析的原始内容。设置后，首次访问 [children] 时自动触发行内解析。
+     */
+    private var lazyInlineContent: String? = null
+
+    /**
+     * 行内解析器引用。与 [lazyInlineContent] 配合使用。
+     */
+    private var lazyInlineParser: ((String, ContainerNode) -> Unit)? = null
+
+    /**
+     * 是否已完成延迟行内解析。
+     */
+    private var inlineParsed: Boolean = false
+
+    /**
+     * 子节点列表。
+     *
+     * 若设置了延迟行内解析内容（通过 [setLazyInlineContent]），
+     * 首次访问时会自动触发行内解析。
+     */
+    val children: List<Node>
+        get() {
+            ensureInlineParsed()
+            return _children
+        }
+
+    /**
+     * 设置延迟行内解析内容。
+     *
+     * 调用后，行内内容不会立即解析，而是在首次访问 [children] 时触发。
+     * 适用于 Paragraph、Heading、SetextHeading、TableCell、DefinitionTerm 等
+     * 需要行内解析的块级节点。
+     *
+     * @param content 待解析的行内原始文本
+     * @param parser 行内解析函数，接收 (content, parent) 并将解析结果追加到 parent
+     */
+    fun setLazyInlineContent(content: String, parser: (String, ContainerNode) -> Unit) {
+        lazyInlineContent = content
+        lazyInlineParser = parser
+        inlineParsed = false
+    }
+
+    /**
+     * 行内内容是否已解析。
+     */
+    val isInlineParsed: Boolean get() = inlineParsed
+
+    /**
+     * 确保行内内容已被解析。若有延迟内容则立即执行解析。
+     */
+    private fun ensureInlineParsed() {
+        if (!inlineParsed && lazyInlineContent != null) {
+            inlineParsed = true
+            val content = lazyInlineContent!!
+            val parser = lazyInlineParser!!
+            lazyInlineContent = null
+            lazyInlineParser = null
+            if (content.isNotEmpty()) {
+                parser(content, this)
+            }
+        }
+    }
+
+    fun appendChild(child: Node) {
+        attachChild(child)
+        _children.add(child)
+    }
+
+    fun insertChild(index: Int, child: Node) {
+        attachChild(child)
+        _children.add(index, child)
+    }
+
+    private fun attachChild(child: Node, key: Int = nextChildKey++) {
+        child.parent = this
+        child.siblingKey = key
+    }
+
+    fun removeChild(child: Node): Boolean {
+        child.parent = null
+        return _children.remove(child)
+    }
+
+    fun removeChildAt(index: Int): Node {
+        val child = _children.removeAt(index)
+        child.parent = null
+        return child
+    }
+
+    fun replaceChild(old: Node, new: Node) {
+        val index = _children.indexOf(old)
+        if (index >= 0) {
+            old.parent = null
+            attachChild(new, old.siblingKey)
+            _children[index] = new
+        }
+    }
+
+    fun replaceChildren(startIndex: Int, endIndex: Int, newChildren: List<Node>) {
+        val replacedKeys = (startIndex until endIndex).map { _children[it].siblingKey }
+        for (i in startIndex until endIndex) {
+            _children[i].parent = null
+        }
+        val removed = endIndex - startIndex
+        for (i in 0 until removed) {
+            _children.removeAt(startIndex)
+        }
+        newChildren.forEachIndexed { i, child ->
+            val replacedKey = replacedKeys.getOrNull(i)
+            if (replacedKey == null) attachChild(child) else attachChild(child, replacedKey)
+            _children.add(startIndex + i, child)
+        }
+    }
+
+    fun clearChildren() {
+        _children.forEach { it.parent = null }
+        _children.clear()
+        nextChildKey = 0
+        // 同时清除 lazy 状态，避免 clear 后重新触发旧的 lazy 解析
+        lazyInlineContent = null
+        lazyInlineParser = null
+        inlineParsed = false
+    }
+
+    fun childCount(): Int {
+        ensureInlineParsed()
+        return _children.size
+    }
+}
+
+/**
+ * 叶子节点，不能包含子节点，仅包含文本内容。
+ */
+sealed class LeafNode : Node() {
+    abstract val literal: String
+}

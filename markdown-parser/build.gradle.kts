@@ -1,96 +1,71 @@
+/*
+ * Copyright (c) 2026 huarangmeng
+ * Copyright (c) 2026 Liyan Zhao (zly2006)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.mavenPublish)
+    kotlin("multiplatform")
+    kotlin("plugin.compose")
+    id("com.android.kotlin.multiplatform.library")
 }
 
 kotlin {
-    jvmToolchain(21)
+    androidLibrary {
+        namespace = "me.zly2006.markdown.parser"
+        compileSdk = 37
+        minSdk = 27
 
-    android {
-        namespace = "com.hrm.markdown.parser"
-        compileSdk = libs.versions.android.compileSdk.get().toInt()
-        minSdk = libs.versions.android.minSdk.get().toInt()
-
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_17
+        }
         optimization {
             consumerKeepRules.publish = true
             consumerKeepRules.files.add(project.file("consumer-rules.pro"))
         }
     }
-
+    jvm {
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_17
+        }
+    }
     listOf(
         iosArm64(),
-        iosSimulatorArm64()
+        iosSimulatorArm64(),
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "MarkdownParser"
             isStatic = true
         }
     }
-
-    jvm()
-
-    js {
-        browser()
-    }
-
-    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-    }
+    macosArm64()
 
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.kotlinx.coroutines.core)
+            api("org.jetbrains.compose.runtime:runtime:1.11.1")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
         }
         commonTest.dependencies {
-            implementation(libs.kotlin.test)
-        }
-    }
-}
-
-mavenPublishing {
-    publishToMavenCentral(true)
-
-    signAllPublications()
-
-    coordinates(
-        "io.github.huarangmeng",
-        "markdown-parser",
-        rootProject.property("VERSION").toString()
-    )
-
-    pom {
-        name.set("Kotlin Multiplatform Markdown Parser")
-        description.set(
-            """
-            Cross-platform Markdown parsing solution with:
-            - Full Markdown syntax support
-            - AST (Abstract Syntax Tree) generation
-            - Incremental parsing support
-            - Multi-platform support (Android/iOS/JVM/JS/WasmJS)
-        """.trimIndent()
-        )
-        inceptionYear.set("2026")
-        url.set("https://github.com/huarangmeng/Markdown")
-        licenses {
-            license {
-                name.set("MIT License")
-                url.set("https://opensource.org/licenses/MIT")
-                distribution.set("repo")
-            }
-        }
-        developers {
-            developer {
-                id.set("huarangmeng")
-                name.set("Kotlin Multiplatform Specialist")
-                url.set("https://github.com/huarangmeng/")
-            }
-        }
-        scm {
-            url.set("https://github.com/huarangmeng/Markdown")
-            connection.set("scm:git:git://github.com/huarangmeng/Markdown.git")
-            developerConnection.set("scm:git:ssh://git@github.com/huarangmeng/Markdown.git")
+            implementation(kotlin("test"))
         }
     }
 }

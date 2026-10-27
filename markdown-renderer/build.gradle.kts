@@ -1,134 +1,137 @@
+/*
+ * Copyright (c) 2026 huarangmeng
+ * Copyright (c) 2026 Liyan Zhao (zly2006)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.mavenPublish)
+    kotlin("multiplatform")
+    kotlin("plugin.compose")
+    id("com.android.kotlin.multiplatform.library")
+    id("org.jetbrains.compose")
 }
 
 kotlin {
-    jvmToolchain(21)
+    androidLibrary {
+        namespace = "me.zly2006.markdown.renderer"
+        compileSdk = 37
+        minSdk = 27
 
-    android {
-        namespace = "com.hrm.markdown.renderer"
-        compileSdk = libs.versions.android.compileSdk.get().toInt()
-        minSdk = libs.versions.android.minSdk.get().toInt()
-
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_17
+        }
         optimization {
             consumerKeepRules.publish = true
             consumerKeepRules.files.add(project.file("consumer-rules.pro"))
         }
     }
-
+    jvm {
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_17
+        }
+    }
     listOf(
         iosArm64(),
-        iosSimulatorArm64()
+        iosSimulatorArm64(),
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "MarkdownRenderer"
             isStatic = true
         }
     }
-
-    jvm()
-
-    js {
-        browser()
+    macosArm64 {
+        val foundationFriendModule =
+            providers.provider {
+                configurations
+                    .getByName("macosArm64CompileKlibraries")
+                    .incoming
+                    .artifactView {
+                        componentFilter { identifier ->
+                            identifier is ModuleComponentIdentifier &&
+                                identifier.group == "org.jetbrains.compose.foundation" &&
+                                identifier.module == "foundation-macosarm64"
+                        }
+                    }.files
+                    .singleFile
+            }
+        compilations.configureEach {
+            compileTaskProvider.configure {
+                compilerOptions.freeCompilerArgs.add(
+                    foundationFriendModule.map { "-friend-modules=${it.absolutePath}" },
+                )
+            }
+        }
     }
 
-    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-    }
+    applyDefaultHierarchyTemplate()
 
     sourceSets {
         commonMain.dependencies {
-            api(projects.markdownParser)
-            api(projects.markdownRuntime)
+            api(project(":markdown-parser"))
+            api(project(":markdown-runtime"))
 
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.material3)
-            implementation(libs.compose.ui)
-            implementation(libs.compose.components.resources)
+            api("org.jetbrains.compose.runtime:runtime:1.11.1")
+            api("org.jetbrains.compose.foundation:foundation:1.11.1")
+            api("org.jetbrains.compose.material3:material3:1.10.0-alpha05")
+            api("org.jetbrains.compose.ui:ui:1.11.1")
+            implementation("org.jetbrains.compose.components:components-resources:1.11.1")
 
-            implementation(libs.bundles.latex)
-            implementation(libs.bundles.codehigh)
-            implementation(libs.diagram.render)
+            api(project(":latex-renderer"))
+            api(project(":codehighlight-render"))
 
-            implementation(libs.coil.compose)
-            implementation(libs.coil.network.ktor3)
+            implementation("io.coil-kt.coil3:coil-compose:3.5.0")
+            implementation("io.coil-kt.coil3:coil-network-ktor3:3.5.0")
         }
-        commonTest.dependencies {
-            implementation(libs.kotlin.test)
-            implementation(libs.kotlinx.coroutines.core)
-            implementation("org.jetbrains.compose.ui:ui-test:${libs.versions.composeMultiplatform.get()}")
+        val persistentSelectionMain by creating {
+            dependsOn(commonMain.get())
+            kotlin.srcDir("src/androidAndJvmMain/kotlin")
         }
-        jvmTest.dependencies {
-            implementation(compose.desktop.currentOs)
-        }
-        androidMain.dependencies {
-            implementation(libs.ktor.client.android)
+        androidMain {
+            dependsOn(persistentSelectionMain)
+            dependencies {
+                implementation("io.ktor:ktor-client-android:3.5.0")
+            }
         }
         iosMain.dependencies {
-            implementation(libs.ktor.client.darwin)
+            implementation("io.ktor:ktor-client-darwin:3.5.0")
         }
-        jvmMain.dependencies {
-            implementation(libs.ktor.client.java)
+        macosMain.dependencies {
+            implementation("io.ktor:ktor-client-darwin:3.5.0")
         }
-        jsMain.dependencies {
-            implementation(libs.ktor.client.js)
+        macosMain {
+            dependsOn(persistentSelectionMain)
         }
-        val wasmJsMain by getting {
+        jvmMain {
+            dependsOn(persistentSelectionMain)
             dependencies {
-                implementation(libs.ktor.client.js)
+                implementation("io.ktor:ktor-client-java:3.5.0")
             }
         }
-    }
-}
-
-mavenPublishing {
-    publishToMavenCentral(true)
-
-    signAllPublications()
-
-    coordinates(
-        "io.github.huarangmeng",
-        "markdown-renderer",
-        rootProject.property("VERSION").toString()
-    )
-
-    pom {
-        name.set("Kotlin Multiplatform Markdown Renderer")
-        description.set(
-            """
-            Cross-platform Markdown rendering solution with:
-            - Full Markdown syntax support
-            - Compose Multiplatform UI integration
-            - Custom rendering styles
-            - Multi-platform support (Android/iOS/JVM/JS/WasmJS)
-        """.trimIndent()
-        )
-        inceptionYear.set("2026")
-        url.set("https://github.com/huarangmeng/Markdown")
-        licenses {
-            license {
-                name.set("MIT License")
-                url.set("https://opensource.org/licenses/MIT")
-                distribution.set("repo")
-            }
-        }
-        developers {
-            developer {
-                id.set("huarangmeng")
-                name.set("Kotlin Multiplatform Specialist")
-                url.set("https://github.com/huarangmeng/")
-            }
-        }
-        scm {
-            url.set("https://github.com/huarangmeng/Markdown")
-            connection.set("scm:git:git://github.com/huarangmeng/Markdown.git")
-            developerConnection.set("scm:git:ssh://git@github.com/huarangmeng/Markdown.git")
+        jvmTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(compose.desktop.currentOs)
+            implementation("org.jetbrains.compose.ui:ui-test:1.11.1")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
         }
     }
 }
