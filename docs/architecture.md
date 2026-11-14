@@ -22,7 +22,7 @@ renderer 的公开类型涉及 Compose 的 Modifier、TextStyle、ScrollState、
 
 当前保留 Android、JVM、iOS ARM64、iOS Simulator ARM64 和 macOS ARM64 的既有目标。是否补充其他目标应另行决定，不能将未编译的目标报告为可发布。
 
-文字选择桥接沿用当前 Compose 1.11.1 的内部 API，并保留 macOS 编译所需的 friend-module 配置。此轮只验证了当前固定依赖组合；后续升级 Compose 或声明更宽的兼容范围时，必须重新验证选择、滚动和平台链接。
+文字选择桥接沿用当前 Compose 1.12.2 的内部 API，并保留 macOS 编译所需的 friend-module 配置。此轮只验证了当前固定依赖组合；后续升级 Compose 或声明更宽的兼容范围时，必须重新验证选择、滚动和平台链接。
 
 ## 独立性
 

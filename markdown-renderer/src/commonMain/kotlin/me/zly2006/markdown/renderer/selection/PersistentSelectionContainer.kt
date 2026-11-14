@@ -3,7 +3,7 @@
 /*
  * Copyright 2021 The Android Open Source Project
  * Copyright (c) 2026 Liyan Zhao (zly2006)
- * Modified by Liyan Zhao in 2026: package relocation and fork integration.
+ * Modified by Liyan Zhao in 2026: package relocation, persistent selection, and Compose 1.12 platform ABI adaptation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@
 package me.zly2006.markdown.renderer.selection
 
 import androidx.collection.LongObjectMap
+import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.text.selection.LocalSelectionRegistrar
 import androidx.compose.foundation.text.selection.Selectable
 import androidx.compose.foundation.text.selection.Selection
 import androidx.compose.foundation.text.selection.SelectionAdjustment
-import androidx.compose.foundation.text.selection.SelectionLayoutBuilder
 import androidx.compose.foundation.text.selection.SelectionRegistrar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.PinnableContainer
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
@@ -147,7 +148,7 @@ private class PersistentSelectionRegistrar(
             persistentSelectable.attach(selectable)
             persistentSelectable.documentOrder = documentOrder
         } else {
-            PersistentSelectable(selectable, documentOrder).also {
+            createPersistentSelectable(selectable, documentOrder).also {
                 selectables[selectable.selectableId] = it
                 androidxRegistrar.subscribe(it)
             }
@@ -263,13 +264,13 @@ private class ScopedPersistentSelectionRegistrar(
     }
 }
 
-private class PersistentSelectable(
+internal abstract class PersistentSelectable(
     delegate: Selectable,
     override var documentOrder: List<Int>,
 ) : Selectable,
     DocumentOrderedSelectable {
     override val selectableId = delegate.selectableId
-    private var delegate: Selectable? = delegate
+    protected var delegate: Selectable? = delegate
     private var text = delegate.getText()
     private var selectAllSelection = delegate.getSelectAllSelection()
 
@@ -287,9 +288,12 @@ private class PersistentSelectable(
         return true
     }
 
-    override fun appendSelectableInfoToBuilder(builder: SelectionLayoutBuilder) {
-        delegate?.appendSelectableInfoToBuilder(builder)
-    }
+    // 文本代理已保留选区；不要让新版自动滚动把已选择的惰性布局全部固定在内存中。
+    override val pinnableContainer: PinnableContainer?
+        get() = null
+
+    override val bringIntoViewRequester: BringIntoViewRequester?
+        get() = delegate?.bringIntoViewRequester
 
     override fun getSelectAllSelection(): Selection? =
         delegate?.getSelectAllSelection() ?: selectAllSelection
@@ -320,3 +324,8 @@ private class PersistentSelectable(
 
     override fun getLineHeight(offset: Int): Float = delegate?.getLineHeight(offset) ?: 0f
 }
+
+internal expect fun createPersistentSelectable(
+    delegate: Selectable,
+    documentOrder: List<Int>,
+): PersistentSelectable

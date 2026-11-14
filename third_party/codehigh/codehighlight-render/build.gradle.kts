@@ -45,10 +45,10 @@ kotlin {
 
     sourceSets.commonMain.dependencies {
         api(project(":codehighlight-parser"))
-        implementation("org.jetbrains.compose.runtime:runtime:1.11.1")
-        implementation("org.jetbrains.compose.foundation:foundation:1.11.1")
+        implementation("org.jetbrains.compose.runtime:runtime:${property("compose.version")}")
+        implementation("org.jetbrains.compose.foundation:foundation:${property("compose.version")}")
         implementation("org.jetbrains.compose.material3:material3:1.9.0")
-        implementation("org.jetbrains.compose.ui:ui:1.11.1")
+        implementation("org.jetbrains.compose.ui:ui:${property("compose.version")}")
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     }
 }

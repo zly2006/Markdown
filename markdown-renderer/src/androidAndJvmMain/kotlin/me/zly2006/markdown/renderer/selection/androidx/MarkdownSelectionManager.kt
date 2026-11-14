@@ -3,7 +3,7 @@
 /*
  * Copyright 2021 The Android Open Source Project
  * Copyright (c) 2026 Liyan Zhao (zly2006)
- * Modified by Liyan Zhao in 2026: package relocation and fork integration.
+ * Modified by Liyan Zhao in 2026: package relocation, persistent selection, and Compose 1.12 platform ABI adaptation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1159,10 +1159,15 @@ internal class MarkdownSelectionManager(
                 containerCoordinates = containerCoordinates,
                 isStartHandle = isStartHandle,
                 previousSelection = previousSelection,
+                previousLayout = if (previousHandlePosition.isUnspecified) null else previousSelectionLayout,
                 selectableIdOrderingComparator = selectableIdOrderingComparator,
+                // 保留既有选区行为；保留的离屏代理不能参与新增的空白区域命中布局。
+                allowSelectionBetweenSelectables = false,
             )
 
-        sortedSelectables.fastForEach { it.appendSelectableInfoToBuilder(builder) }
+        sortedSelectables.fastForEachIndexed { index, selectable ->
+            selectable.appendToSelectionLayout(builder, isLast = index == sortedSelectables.lastIndex)
+        }
 
         return builder.build()
     }

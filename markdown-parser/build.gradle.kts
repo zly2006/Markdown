@@ -61,7 +61,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            api("org.jetbrains.compose.runtime:runtime:1.11.1")
+            api("org.jetbrains.compose.runtime:runtime:${property("compose.version")}")
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
         }
         commonTest.dependencies {

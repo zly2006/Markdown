@@ -3,7 +3,7 @@
 /*
  * Copyright 2021 The Android Open Source Project
  * Copyright (c) 2026 Liyan Zhao (zly2006)
- * Modified by Liyan Zhao in 2026: package relocation and fork integration.
+ * Modified by Liyan Zhao in 2026: package relocation, persistent selection, and Compose 1.12 platform ABI adaptation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import androidx.collection.emptyLongObjectMap
 import androidx.collection.mutableLongObjectMapOf
 import androidx.compose.foundation.AtomicLong
 import androidx.compose.foundation.internal.requirePrecondition
+import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.text.selection.Selectable
 import androidx.compose.foundation.text.selection.Selection
 import androidx.compose.foundation.text.selection.SelectionAdjustment
@@ -37,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.PinnableContainer
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
@@ -48,8 +50,6 @@ internal interface MarkdownSelectable :
     Selectable,
     DocumentOrderedSelectable {
     override val selectableId: Long
-
-    override fun appendSelectableInfoToBuilder(builder: SelectionLayoutBuilder)
 
     override fun getSelectAllSelection(): Selection?
 
@@ -76,8 +76,8 @@ internal interface MarkdownSelectable :
     override fun getLineHeight(offset: Int): Float
 }
 
-private class MarkdownSelectableAdapter(
-    private val selectable: Selectable,
+internal abstract class MarkdownSelectableAdapter(
+    protected val selectable: Selectable,
     private val orderedSelectable: DocumentOrderedSelectable,
 ) : MarkdownSelectable {
     override val documentOrder: List<Int>
@@ -85,8 +85,11 @@ private class MarkdownSelectableAdapter(
     override val selectableId: Long
         get() = selectable.selectableId
 
-    override fun appendSelectableInfoToBuilder(builder: SelectionLayoutBuilder) =
-        selectable.appendSelectableInfoToBuilder(builder)
+    override val pinnableContainer: PinnableContainer?
+        get() = selectable.pinnableContainer
+
+    override val bringIntoViewRequester: BringIntoViewRequester?
+        get() = selectable.bringIntoViewRequester
 
     override fun getSelectAllSelection(): Selection? = selectable.getSelectAllSelection()
 
@@ -198,7 +201,7 @@ internal class MarkdownSelectionRegistrarImpl private constructor(
     override fun subscribe(selectable: Selectable): Selectable {
         val orderedSelectable = selectable as? DocumentOrderedSelectable
             ?: error("Markdown selection requires an explicit document order")
-        val adapter = MarkdownSelectableAdapter(selectable, orderedSelectable)
+        val adapter = createMarkdownSelectableAdapter(selectable, orderedSelectable)
         requirePrecondition(adapter.selectableId != SelectionRegistrar.InvalidSelectableId) {
             "The selectable contains an invalid id: ${adapter.selectableId}"
         }
@@ -287,3 +290,13 @@ internal class MarkdownSelectionRegistrarImpl private constructor(
         onSelectableChangeCallback?.invoke(selectableId)
     }
 }
+
+internal expect fun createMarkdownSelectableAdapter(
+    selectable: Selectable,
+    orderedSelectable: DocumentOrderedSelectable,
+): MarkdownSelectable
+
+internal expect fun MarkdownSelectable.appendToSelectionLayout(
+    builder: SelectionLayoutBuilder,
+    isLast: Boolean,
+)

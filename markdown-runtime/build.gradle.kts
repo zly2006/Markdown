@@ -62,7 +62,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":markdown-parser"))
-            api("org.jetbrains.compose.runtime:runtime:1.11.1")
+            api("org.jetbrains.compose.runtime:runtime:${property("compose.version")}")
         }
     }
 }
