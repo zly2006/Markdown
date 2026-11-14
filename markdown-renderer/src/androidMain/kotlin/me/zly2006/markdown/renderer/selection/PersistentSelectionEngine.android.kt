@@ -1,3 +1,5 @@
+@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
+
 /*
  * Copyright (c) 2026 huarangmeng
  * Copyright (c) 2026 Liyan Zhao (zly2006)
@@ -23,6 +25,8 @@
 
 package me.zly2006.markdown.renderer.selection
 
+import androidx.compose.foundation.text.selection.Selectable
+import androidx.compose.foundation.text.selection.SelectionLayoutBuilder
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import me.zly2006.markdown.renderer.selection.androidx.MarkdownSelectionContainer
@@ -33,4 +37,13 @@ internal actual fun PersistentSelectionEngine(
     content: @Composable () -> Unit,
 ) {
     MarkdownSelectionContainer(modifier, content)
+}
+
+internal actual fun createPersistentSelectable(
+    delegate: Selectable,
+    documentOrder: List<Int>,
+): PersistentSelectable = object : PersistentSelectable(delegate, documentOrder) {
+    override fun appendSelectableInfoToBuilder(builder: SelectionLayoutBuilder) {
+        this.delegate?.appendSelectableInfoToBuilder(builder)
+    }
 }

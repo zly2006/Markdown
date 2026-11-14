@@ -86,11 +86,11 @@ kotlin {
             api(project(":markdown-parser"))
             api(project(":markdown-runtime"))
 
-            api("org.jetbrains.compose.runtime:runtime:1.11.1")
-            api("org.jetbrains.compose.foundation:foundation:1.11.1")
+            api("org.jetbrains.compose.runtime:runtime:${property("compose.version")}")
+            api("org.jetbrains.compose.foundation:foundation:${property("compose.version")}")
             api("org.jetbrains.compose.material3:material3:1.10.0-alpha05")
-            api("org.jetbrains.compose.ui:ui:1.11.1")
-            implementation("org.jetbrains.compose.components:components-resources:1.11.1")
+            api("org.jetbrains.compose.ui:ui:${property("compose.version")}")
+            implementation("org.jetbrains.compose.components:components-resources:${property("compose.version")}")
 
             api(project(":latex-renderer"))
             api(project(":codehighlight-render"))
@@ -126,7 +126,7 @@ kotlin {
         jvmTest.dependencies {
             implementation(kotlin("test"))
             implementation(compose.desktop.currentOs)
-            implementation("org.jetbrains.compose.ui:ui-test:1.11.1")
+            implementation("org.jetbrains.compose.ui:ui-test:${property("compose.version")}")
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
         }
     }
